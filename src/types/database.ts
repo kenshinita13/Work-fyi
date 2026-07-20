@@ -1,0 +1,281 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
+type ProjectStatus = "active" | "on_hold" | "completed" | "archived";
+type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
+type TaskPriority = "low" | "medium" | "high" | "urgent";
+type AiMessageRole = "user" | "assistant" | "system" | "tool";
+
+type Timestamped = {
+  created_at: string;
+  updated_at: string;
+};
+
+export type Database = {
+  public: {
+    Tables: {
+      profiles: {
+        Row: Timestamped & {
+          id: string;
+          full_name: string | null;
+          avatar_url: string | null;
+          timezone: string;
+        };
+        Insert: {
+          id: string;
+          full_name?: string | null;
+          avatar_url?: string | null;
+          timezone?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Omit<Database["public"]["Tables"]["profiles"]["Insert"], "id">
+        >;
+      };
+      workspaces: {
+        Row: Timestamped & {
+          id: string;
+          name: string;
+          slug: string;
+          owner_id: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          owner_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Omit<
+            Database["public"]["Tables"]["workspaces"]["Insert"],
+            "id" | "owner_id"
+          >
+        >;
+      };
+      workspace_members: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          user_id: string;
+          role: WorkspaceRole;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          user_id: string;
+          role: WorkspaceRole;
+          created_at?: string;
+        };
+        Update: Partial<
+          Pick<
+            Database["public"]["Tables"]["workspace_members"]["Insert"],
+            "role"
+          >
+        >;
+      };
+      projects: {
+        Row: Timestamped & {
+          id: string;
+          workspace_id: string;
+          name: string;
+          description: string | null;
+          status: ProjectStatus;
+          created_by: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          name: string;
+          description?: string | null;
+          status?: ProjectStatus;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Omit<
+            Database["public"]["Tables"]["projects"]["Insert"],
+            "id" | "workspace_id" | "created_by"
+          >
+        >;
+      };
+      tasks: {
+        Row: Timestamped & {
+          id: string;
+          workspace_id: string;
+          project_id: string | null;
+          parent_task_id: string | null;
+          title: string;
+          description: string | null;
+          status: TaskStatus;
+          priority: TaskPriority;
+          assigned_to: string | null;
+          due_at: string | null;
+          completed_at: string | null;
+          created_by: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          project_id?: string | null;
+          parent_task_id?: string | null;
+          title: string;
+          description?: string | null;
+          status?: TaskStatus;
+          priority?: TaskPriority;
+          assigned_to?: string | null;
+          due_at?: string | null;
+          completed_at?: string | null;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Omit<
+            Database["public"]["Tables"]["tasks"]["Insert"],
+            "id" | "workspace_id" | "created_by"
+          >
+        >;
+      };
+      task_comments: {
+        Row: Timestamped & {
+          id: string;
+          workspace_id: string;
+          task_id: string;
+          author_id: string;
+          body: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          task_id: string;
+          author_id: string;
+          body: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Pick<Database["public"]["Tables"]["task_comments"]["Insert"], "body">
+        >;
+      };
+      activity_logs: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          actor_id: string | null;
+          action: string;
+          resource_type: string;
+          resource_id: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          actor_id?: string | null;
+          action: string;
+          resource_type: string;
+          resource_id?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: never;
+      };
+      ai_conversations: {
+        Row: Timestamped & {
+          id: string;
+          workspace_id: string;
+          user_id: string;
+          title: string | null;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          user_id: string;
+          title?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Pick<
+            Database["public"]["Tables"]["ai_conversations"]["Insert"],
+            "title"
+          >
+        >;
+      };
+      ai_messages: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          workspace_id: string;
+          user_id: string | null;
+          role: AiMessageRole;
+          content: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          workspace_id: string;
+          user_id?: string | null;
+          role: AiMessageRole;
+          content: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: never;
+      };
+      ai_usage: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          user_id: string;
+          feature: string;
+          model: string;
+          input_tokens: number;
+          output_tokens: number;
+          estimated_cost: number | null;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          user_id: string;
+          feature: string;
+          model: string;
+          input_tokens?: number;
+          output_tokens?: number;
+          estimated_cost?: number | null;
+          status: string;
+          created_at?: string;
+        };
+        Update: never;
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      is_workspace_member: {
+        Args: { target_workspace: string };
+        Returns: boolean;
+      };
+      has_workspace_role: {
+        Args: { target_workspace: string; accepted_roles: WorkspaceRole[] };
+        Returns: boolean;
+      };
+    };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
