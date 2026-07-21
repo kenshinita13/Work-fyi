@@ -11,6 +11,20 @@ type ProjectStatus = "active" | "on_hold" | "completed" | "archived";
 type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
 type TaskPriority = "low" | "medium" | "high" | "urgent";
 type AiMessageRole = "user" | "assistant" | "system" | "tool";
+export type PrimaryRole =
+  | "virtual_assistant"
+  | "freelancer"
+  | "cybersecurity_specialist"
+  | "project_manager"
+  | "administrator"
+  | "other";
+export type PrimaryUseCase =
+  | "virtual_assistance"
+  | "freelancing"
+  | "cybersecurity"
+  | "project_management"
+  | "administration"
+  | "personal_productivity";
 
 type Timestamped = {
   created_at: string;
@@ -26,18 +40,25 @@ export type Database = {
           full_name: string | null;
           avatar_url: string | null;
           timezone: string;
+          primary_role: PrimaryRole | null;
+          primary_use_case: PrimaryUseCase | null;
+          active_workspace_id: string | null;
         };
         Insert: {
           id: string;
           full_name?: string | null;
           avatar_url?: string | null;
           timezone?: string;
+          primary_role?: PrimaryRole | null;
+          primary_use_case?: PrimaryUseCase | null;
+          active_workspace_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<
           Omit<Database["public"]["Tables"]["profiles"]["Insert"], "id">
         >;
+        Relationships: [];
       };
       workspaces: {
         Row: Timestamped & {
@@ -60,6 +81,7 @@ export type Database = {
             "id" | "owner_id"
           >
         >;
+        Relationships: [];
       };
       workspace_members: {
         Row: {
@@ -82,6 +104,7 @@ export type Database = {
             "role"
           >
         >;
+        Relationships: [];
       };
       projects: {
         Row: Timestamped & {
@@ -108,6 +131,7 @@ export type Database = {
             "id" | "workspace_id" | "created_by"
           >
         >;
+        Relationships: [];
       };
       tasks: {
         Row: Timestamped & {
@@ -146,6 +170,7 @@ export type Database = {
             "id" | "workspace_id" | "created_by"
           >
         >;
+        Relationships: [];
       };
       task_comments: {
         Row: Timestamped & {
@@ -167,6 +192,7 @@ export type Database = {
         Update: Partial<
           Pick<Database["public"]["Tables"]["task_comments"]["Insert"], "body">
         >;
+        Relationships: [];
       };
       activity_logs: {
         Row: {
@@ -190,6 +216,7 @@ export type Database = {
           created_at?: string;
         };
         Update: never;
+        Relationships: [];
       };
       ai_conversations: {
         Row: Timestamped & {
@@ -212,6 +239,7 @@ export type Database = {
             "title"
           >
         >;
+        Relationships: [];
       };
       ai_messages: {
         Row: {
@@ -235,6 +263,7 @@ export type Database = {
           created_at?: string;
         };
         Update: never;
+        Relationships: [];
       };
       ai_usage: {
         Row: {
@@ -262,6 +291,7 @@ export type Database = {
           created_at?: string;
         };
         Update: never;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
@@ -273,6 +303,16 @@ export type Database = {
       has_workspace_role: {
         Args: { target_workspace: string; accepted_roles: WorkspaceRole[] };
         Returns: boolean;
+      };
+      complete_onboarding: {
+        Args: {
+          input_full_name: string;
+          input_workspace_name: string;
+          input_primary_role: PrimaryRole;
+          input_primary_use_case: PrimaryUseCase;
+          input_timezone: string;
+        };
+        Returns: string;
       };
     };
     Enums: Record<string, never>;
