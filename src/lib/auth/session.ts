@@ -23,7 +23,9 @@ export const getWorkspaceContext = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, avatar_url, active_workspace_id")
+    .select(
+      "full_name, avatar_url, active_workspace_id, primary_role, primary_use_case",
+    )
     .eq("id", claims.sub)
     .maybeSingle();
 

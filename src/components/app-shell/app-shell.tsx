@@ -56,7 +56,7 @@ const navigation = [
   { label: "Projects", icon: FolderKanban, href: "/projects", ready: true },
   { label: "Tasks", icon: ListTodo, href: "/tasks", ready: true },
   { label: "Documents", icon: FileText, ready: false },
-  { label: "AI Assistant", icon: Sparkles, ready: false },
+  { label: "AI Assistant", icon: Sparkles, href: "/ai", ready: true },
   { label: "Calendar", icon: CalendarDays, ready: false },
   { label: "Email", icon: Mail, ready: false },
   { label: "Automations", icon: Workflow, ready: false },
@@ -234,6 +234,12 @@ export function AppShell({
                     <Link href="/projects?new=1">
                       <FolderKanban className="size-4" aria-hidden="true" />
                       New project
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/ai">
+                      <Sparkles className="size-4" aria-hidden="true" />
+                      Plan with AI
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

@@ -15,6 +15,20 @@ import { getWorkspaceContext } from "@/lib/auth/session";
 import { canManageProjects } from "@/lib/projects/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+const activityLabels: Record<string, string> = {
+  "ai.plan_accepted": "AI task plan approved",
+  "project.created": "Project created",
+  "project.updated": "Project updated",
+  "task.created": "Task created",
+  "task.updated": "Task updated",
+  "task.status_changed": "Task status changed",
+  "task.comment_added": "Task comment added",
+};
+
+function activityLabel(action: string) {
+  return activityLabels[action] ?? action.replaceAll(/[._]/g, " ");
+}
+
 function startOfUtcDay(date = new Date()) {
   return new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
@@ -204,7 +218,7 @@ export default async function DashboardPage() {
                     key={event.id}
                     className="flex justify-between gap-4 py-3 text-sm"
                   >
-                    <span>{event.action.replaceAll(".", " ")}</span>
+                    <span>{activityLabel(event.action)}</span>
                     <time className="font-mono text-xs text-muted-foreground">
                       {new Date(event.created_at).toLocaleDateString("en-US")}
                     </time>

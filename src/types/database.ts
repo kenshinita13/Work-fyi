@@ -11,6 +11,8 @@ export type ProjectStatus = "active" | "on_hold" | "completed" | "archived";
 export type TaskStatus =
   "todo" | "in_progress" | "review" | "done" | "cancelled";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
+export type AiTaskPlanMode = "task_plan" | "subtasks";
+export type AiTaskPlanDraftStatus = "pending" | "approved" | "expired";
 type AiMessageRole = "user" | "assistant" | "system" | "tool";
 export type PrimaryRole =
   | "virtual_assistant"
@@ -291,7 +293,51 @@ export type Database = {
           status: string;
           created_at?: string;
         };
-        Update: never;
+        Update: Partial<
+          Pick<
+            Database["public"]["Tables"]["ai_usage"]["Insert"],
+            | "model"
+            | "input_tokens"
+            | "output_tokens"
+            | "estimated_cost"
+            | "status"
+          >
+        >;
+        Relationships: [];
+      };
+      ai_task_plan_drafts: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          user_id: string;
+          project_id: string | null;
+          parent_task_id: string | null;
+          mode: AiTaskPlanMode;
+          plan: Json;
+          status: AiTaskPlanDraftStatus;
+          expires_at: string;
+          approved_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          user_id: string;
+          project_id?: string | null;
+          parent_task_id?: string | null;
+          mode: AiTaskPlanMode;
+          plan: Json;
+          status?: AiTaskPlanDraftStatus;
+          expires_at?: string;
+          approved_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<
+          Pick<
+            Database["public"]["Tables"]["ai_task_plan_drafts"]["Insert"],
+            "status" | "approved_at"
+          >
+        >;
         Relationships: [];
       };
     };
@@ -314,6 +360,18 @@ export type Database = {
           input_timezone: string;
         };
         Returns: string;
+      };
+      reserve_ai_task_plan_usage: {
+        Args: {
+          input_workspace_id: string;
+          input_user_id: string;
+          input_model: string;
+        };
+        Returns: string;
+      };
+      approve_ai_task_plan: {
+        Args: { input_draft_id: string };
+        Returns: number;
       };
     };
     Enums: Record<string, never>;

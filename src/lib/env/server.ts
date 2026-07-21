@@ -16,6 +16,20 @@ const serverEnvSchema = z.object({
   ENCRYPTION_KEY: z.string().min(32),
 });
 
+const supabaseServerEnvSchema = z.object({
+  NEXT_PUBLIC_SUPABASE_URL: z.url(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+});
+
+const aiEnvSchema = z.object({
+  AI_API_KEY: z.string().min(20),
+  AI_MODEL: z
+    .string()
+    .min(1)
+    .max(200)
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]*$/),
+});
+
 export type ServerEnv = {
   appUrl: string;
   supabaseUrl: string;
@@ -28,6 +42,38 @@ export type ServerEnv = {
   googleRedirectUri: string;
   encryptionKey: string;
 };
+
+export type SupabaseServerEnv = {
+  supabaseUrl: string;
+  supabaseServiceRoleKey: string;
+};
+
+export type AiEnv = {
+  aiApiKey: string;
+  aiModel: string;
+};
+
+export function getSupabaseServerEnv(
+  source: Record<string, string | undefined> = process.env,
+): SupabaseServerEnv {
+  const env = supabaseServerEnvSchema.parse(source);
+
+  return {
+    supabaseUrl: env.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+}
+
+export function getAiEnv(
+  source: Record<string, string | undefined> = process.env,
+): AiEnv {
+  const env = aiEnvSchema.parse(source);
+
+  return {
+    aiApiKey: env.AI_API_KEY,
+    aiModel: env.AI_MODEL,
+  };
+}
 
 export function getServerEnv(
   source: Record<string, string | undefined> = process.env,

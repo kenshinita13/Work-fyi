@@ -22,7 +22,13 @@ export async function refreshAuthSession(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  const isProtectedRoute = ["/dashboard", "/projects", "/tasks", "/team"].some(
+  const isProtectedRoute = [
+    "/dashboard",
+    "/projects",
+    "/tasks",
+    "/ai",
+    "/team",
+  ].some(
     (route) =>
       request.nextUrl.pathname === route ||
       request.nextUrl.pathname.startsWith(`${route}/`),
