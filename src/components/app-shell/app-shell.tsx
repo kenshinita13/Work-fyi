@@ -18,6 +18,7 @@ import {
   Settings,
   Sparkles,
   Workflow,
+  UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -53,7 +54,7 @@ const navigation = [
     ready: true,
   },
   { label: "Projects", icon: FolderKanban, href: "/projects", ready: true },
-  { label: "Tasks", icon: ListTodo, ready: false },
+  { label: "Tasks", icon: ListTodo, href: "/tasks", ready: true },
   { label: "Documents", icon: FileText, ready: false },
   { label: "AI Assistant", icon: Sparkles, ready: false },
   { label: "Calendar", icon: CalendarDays, ready: false },
@@ -61,6 +62,7 @@ const navigation = [
   { label: "Automations", icon: Workflow, ready: false },
   { label: "Monitoring", icon: Activity, ready: false },
   { label: "Integrations", icon: Layers3, ready: false },
+  { label: "Team", icon: UsersRound, href: "/team", ready: true },
   { label: "Settings", icon: Settings, ready: false },
 ] as const;
 
@@ -214,12 +216,28 @@ export function AppShell({
 
           <div className="ml-auto flex items-center gap-2">
             {canCreateProject && (
-              <Button size="sm" asChild>
-                <Link href="/projects?new=1">
-                  <Plus className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">Create</span>
-                </Link>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="size-4" aria-hidden="true" />
+                    <span className="hidden sm:inline">Create</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem asChild>
+                    <Link href="/tasks?new=1">
+                      <ListTodo className="size-4" aria-hidden="true" />
+                      New task
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/projects?new=1">
+                      <FolderKanban className="size-4" aria-hidden="true" />
+                      New project
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             <ThemeSwitcher />
             <Button

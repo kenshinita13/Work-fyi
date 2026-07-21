@@ -22,7 +22,7 @@ import { initialFormState } from "@/lib/auth/form-state";
 const roles = [
   ["virtual_assistant", "Virtual assistant"],
   ["freelancer", "Freelancer"],
-  ["cybersecurity_specialist", "Cybersecurity specialist"],
+  ["cybersecurity_specialist", "Cybersecurity analyst"],
   ["project_manager", "Project manager"],
   ["administrator", "Administrator"],
   ["other", "Other"],

@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   Clock3,
   FolderKanban,
+  ListTodo,
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
@@ -29,40 +30,67 @@ export default async function DashboardPage() {
   const tomorrow = new Date(today);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
-  const [dueToday, overdue, activeProjects, recentActivity, recentProjects] =
-    await Promise.all([
-      supabase
-        .from("tasks")
-        .select("id", { count: "exact", head: true })
-        .eq("workspace_id", context.workspace.id)
-        .gte("due_at", today.toISOString())
-        .lt("due_at", tomorrow.toISOString())
-        .not("status", "in", "(done,cancelled)"),
-      supabase
-        .from("tasks")
-        .select("id", { count: "exact", head: true })
-        .eq("workspace_id", context.workspace.id)
-        .lt("due_at", today.toISOString())
-        .not("status", "in", "(done,cancelled)"),
-      supabase
-        .from("projects")
-        .select("id", { count: "exact", head: true })
-        .eq("workspace_id", context.workspace.id)
-        .eq("status", "active"),
-      supabase
-        .from("activity_logs")
-        .select("id, action, created_at")
-        .eq("workspace_id", context.workspace.id)
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("projects")
-        .select("id, name, status, updated_at")
-        .eq("workspace_id", context.workspace.id)
-        .neq("status", "archived")
-        .order("updated_at", { ascending: false })
-        .limit(5),
-    ]);
+  const [
+    dueToday,
+    overdue,
+    activeProjects,
+    recentActivity,
+    recentProjects,
+    taskStatuses,
+  ] = await Promise.all([
+    supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", context.workspace.id)
+      .gte("due_at", today.toISOString())
+      .lt("due_at", tomorrow.toISOString())
+      .not("status", "in", "(done,cancelled)"),
+    supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", context.workspace.id)
+      .lt("due_at", today.toISOString())
+      .not("status", "in", "(done,cancelled)"),
+    supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", context.workspace.id)
+      .eq("status", "active"),
+    supabase
+      .from("activity_logs")
+      .select("id, action, created_at")
+      .eq("workspace_id", context.workspace.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("projects")
+      .select("id, name, status, updated_at")
+      .eq("workspace_id", context.workspace.id)
+      .neq("status", "archived")
+      .order("updated_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("tasks")
+      .select("status")
+      .eq("workspace_id", context.workspace.id)
+      .limit(1000),
+  ]);
+
+  const taskStatusCounts = {
+    todo: 0,
+    in_progress: 0,
+    review: 0,
+    done: 0,
+  };
+  taskStatuses.data?.forEach((task) => {
+    if (task.status in taskStatusCounts) {
+      taskStatusCounts[task.status as keyof typeof taskStatusCounts] += 1;
+    }
+  });
+  const openTasks =
+    taskStatusCounts.todo +
+    taskStatusCounts.in_progress +
+    taskStatusCounts.review;
 
   const metrics = [
     { label: "Due today", value: dueToday.count ?? 0, icon: Clock3 },
@@ -72,6 +100,7 @@ export default async function DashboardPage() {
       value: activeProjects.count ?? 0,
       icon: FolderKanban,
     },
+    { label: "Open tasks", value: openTasks, icon: ListTodo },
   ];
 
   const isEmpty =
@@ -96,7 +125,7 @@ export default async function DashboardPage() {
       </div>
 
       <section
-        className="grid gap-4 sm:grid-cols-3"
+        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Workspace metrics"
       >
         {metrics.map((metric) => {
@@ -119,6 +148,28 @@ export default async function DashboardPage() {
             </Card>
           );
         })}
+      </section>
+
+      <section
+        className="mt-6 border-y py-4"
+        aria-labelledby="task-status-title"
+      >
+        <h2 id="task-status-title" className="text-sm font-semibold">
+          Tasks by status
+        </h2>
+        <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[
+            ["To do", taskStatusCounts.todo],
+            ["In progress", taskStatusCounts.in_progress],
+            ["Review", taskStatusCounts.review],
+            ["Done", taskStatusCounts.done],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="mt-1 font-mono text-xl font-semibold">{value}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       {isEmpty ? (

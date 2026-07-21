@@ -66,6 +66,18 @@ URL to be allowlisted.
 
 ## Current Phase
 
-Phase 2 adds system-aware light and dark themes plus workspace-scoped project
-creation, editing, search, status filtering, archive and restore flows, project
-task visibility, and trigger-backed activity history.
+Phase 3 adds workspace-scoped task creation and editing, assignment, priority,
+due dates, subtasks, comments, completion and reopen flows, cancellation,
+list and Kanban views, dashboard metrics, and trigger-backed activity history.
+
+## Roles
+
+Workspace roles are authorization boundaries: `owner`, `admin`, `member`, and
+`viewer`. Professional categories such as Virtual Assistant, Cybersecurity
+Analyst, Freelancer, and Project Manager personalize the product but never
+grant access by themselves. Authorization always uses workspace membership and
+database row-level security.
+
+Demo accounts can be provisioned idempotently with `npm run seed:demo`. The
+command creates one shared demo workspace, covers every professional category,
+and prints the generated password once without writing it to the repository.

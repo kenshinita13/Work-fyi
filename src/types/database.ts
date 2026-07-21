@@ -8,8 +8,9 @@ export type Json =
 
 export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
 export type ProjectStatus = "active" | "on_hold" | "completed" | "archived";
-type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
-type TaskPriority = "low" | "medium" | "high" | "urgent";
+export type TaskStatus =
+  "todo" | "in_progress" | "review" | "done" | "cancelled";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
 type AiMessageRole = "user" | "assistant" | "system" | "tool";
 export type PrimaryRole =
   | "virtual_assistant"
@@ -321,3 +322,4 @@ export type Database = {
 };
 
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
+export type Task = Database["public"]["Tables"]["tasks"]["Row"];

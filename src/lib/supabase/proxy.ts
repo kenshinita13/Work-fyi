@@ -21,6 +21,21 @@ export async function refreshAuthSession(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
+  const isProtectedRoute = ["/dashboard", "/projects", "/tasks", "/team"].some(
+    (route) =>
+      request.nextUrl.pathname === route ||
+      request.nextUrl.pathname.startsWith(`${route}/`),
+  );
+
+  if (!data?.claims?.sub && isProtectedRoute) {
+    const loginUrl = request.nextUrl.clone();
+    const nextPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+    loginUrl.pathname = "/auth/login";
+    loginUrl.search = "";
+    loginUrl.searchParams.set("next", nextPath);
+    return NextResponse.redirect(loginUrl);
+  }
+
   return response;
 }

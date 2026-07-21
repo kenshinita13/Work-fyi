@@ -131,9 +131,18 @@ export default async function ProjectDetailPage({
               />
               Project tasks
             </h2>
-            <Badge variant="secondary" className="font-mono font-normal">
-              {tasksResult.data?.length ?? 0}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="font-mono font-normal">
+                {tasksResult.data?.length ?? 0}
+              </Badge>
+              {canManage && !isArchived && (
+                <Button asChild size="sm">
+                  <Link href={`/tasks?projectId=${project.id}&new=1`}>
+                    Create task
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
           <Card>
             <CardContent className="p-0">
@@ -149,9 +158,12 @@ export default async function ProjectDetailPage({
                       className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
+                        <Link
+                          href={`/tasks/${task.id}`}
+                          className="truncate text-sm font-medium hover:text-primary"
+                        >
                           {task.title}
-                        </p>
+                        </Link>
                         <p className="mt-1 text-xs capitalize text-muted-foreground">
                           {task.priority} priority
                           {task.due_at
