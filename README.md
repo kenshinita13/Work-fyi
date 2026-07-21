@@ -59,6 +59,13 @@ npm run build
 Supabase migrations live in `supabase/migrations`. All user-accessible tables
 must keep row-level security enabled with explicit policies.
 
-The Phase 1 migrations must be applied to the linked project before onboarding
-can create a live workspace. Google sign-in also requires the Google provider
-to be enabled in Supabase Auth and the application callback URL to be allowlisted.
+The migrations must be applied to the linked project before onboarding and
+project operations can use the live workspace. Google sign-in also requires
+the Google provider to be enabled in Supabase Auth and the application callback
+URL to be allowlisted.
+
+## Current Phase
+
+Phase 2 adds system-aware light and dark themes plus workspace-scoped project
+creation, editing, search, status filtering, archive and restore flows, project
+task visibility, and trigger-backed activity history.

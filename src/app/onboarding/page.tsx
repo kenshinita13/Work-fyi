@@ -2,6 +2,7 @@ import { Layers3 } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { OnboardingForm } from "@/components/auth/onboarding-form";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import {
   Card,
   CardContent,
@@ -24,6 +25,9 @@ export default async function OnboardingPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-5 py-10 text-foreground sm:px-8">
+      <div className="fixed top-4 right-4">
+        <ThemeSwitcher />
+      </div>
       <div className="w-full max-w-2xl">
         <div className="mb-6 flex items-center gap-3 text-sm font-semibold">
           <span className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">

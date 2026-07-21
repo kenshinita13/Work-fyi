@@ -20,9 +20,10 @@ import {
   Workflow,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,7 +52,7 @@ const navigation = [
     href: "/dashboard",
     ready: true,
   },
-  { label: "Projects", icon: FolderKanban, ready: false },
+  { label: "Projects", icon: FolderKanban, href: "/projects", ready: true },
   { label: "Tasks", icon: ListTodo, ready: false },
   { label: "Documents", icon: FileText, ready: false },
   { label: "AI Assistant", icon: Sparkles, ready: false },
@@ -73,17 +74,26 @@ function initials(name: string) {
 }
 
 function SidebarNavigation() {
+  const pathname = usePathname();
+
   return (
     <nav className="grid gap-1 px-3" aria-label="Workspace navigation">
       {navigation.map((item) => {
         const Icon = item.icon;
 
         if (item.ready) {
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
+
           return (
             <Link
               key={item.label}
               href={item.href}
-              className="flex h-9 items-center gap-3 rounded-md bg-sidebar-accent px-3 text-sm font-medium text-sidebar-accent-foreground"
+              className={`flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+              }`}
             >
               <Icon className="size-4" aria-hidden="true" />
               {item.label}
@@ -142,11 +152,6 @@ function Sidebar({ workspaceName }: { workspaceName: string }) {
       <div className="flex-1 overflow-y-auto py-3">
         <SidebarNavigation />
       </div>
-      <div className="border-t border-sidebar-border px-5 py-4">
-        <Badge variant="outline" className="font-normal text-muted-foreground">
-          Phase 1 foundation
-        </Badge>
-      </div>
     </div>
   );
 }
@@ -156,11 +161,13 @@ export function AppShell({
   workspaceName,
   userName,
   userEmail,
+  canCreateProject,
 }: {
   children: React.ReactNode;
   workspaceName: string;
   userName: string;
   userEmail: string;
+  canCreateProject: boolean;
 }) {
   return (
     <div className="min-h-screen bg-background text-foreground md:grid md:grid-cols-[240px_minmax(0,1fr)]">
@@ -206,14 +213,15 @@ export function AppShell({
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <Button
-              size="sm"
-              disabled
-              title="Quick create is coming in the Projects phase"
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Create</span>
-            </Button>
+            {canCreateProject && (
+              <Button size="sm" asChild>
+                <Link href="/projects?new=1">
+                  <Plus className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Create</span>
+                </Link>
+              </Button>
+            )}
+            <ThemeSwitcher />
             <Button
               variant="ghost"
               size="icon"

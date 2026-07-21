@@ -2,10 +2,11 @@ import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell/app-shell";
 import { getWorkspaceContext } from "@/lib/auth/session";
+import { canManageProjects } from "@/lib/projects/permissions";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardLayout({
+export default async function WorkspaceLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ export default async function DashboardLayout({
       workspaceName={context.workspace.name}
       userName={userName}
       userEmail={userEmail}
+      canCreateProject={canManageProjects(context.membership.role)}
     >
       {children}
     </AppShell>

@@ -1,8 +1,13 @@
 import { Layers3 } from "lucide-react";
 
+import { ThemeSwitcher } from "@/components/theme-switcher";
+
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="grid min-h-screen bg-background text-foreground lg:grid-cols-[minmax(0,1fr)_minmax(420px,560px)]">
+      <div className="fixed top-4 right-4 z-20">
+        <ThemeSwitcher />
+      </div>
       <section className="hidden border-r border-border bg-muted/20 p-10 lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-3 text-sm font-semibold">
           <span className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">

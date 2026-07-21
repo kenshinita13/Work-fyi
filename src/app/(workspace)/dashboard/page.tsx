@@ -5,11 +5,13 @@ import {
   FolderKanban,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getWorkspaceContext } from "@/lib/auth/session";
+import { canManageProjects } from "@/lib/projects/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function startOfUtcDay(date = new Date()) {
@@ -20,7 +22,7 @@ function startOfUtcDay(date = new Date()) {
 
 export default async function DashboardPage() {
   const context = await getWorkspaceContext();
-  if (!context?.workspace) redirect("/onboarding");
+  if (!context?.workspace || !context.membership) redirect("/onboarding");
 
   const supabase = await createSupabaseServerClient();
   const today = startOfUtcDay();
@@ -57,6 +59,7 @@ export default async function DashboardPage() {
         .from("projects")
         .select("id, name, status, updated_at")
         .eq("workspace_id", context.workspace.id)
+        .neq("status", "archived")
         .order("updated_at", { ascending: false })
         .limit(5),
     ]);
@@ -75,6 +78,7 @@ export default async function DashboardPage() {
     metrics.every((metric) => metric.value === 0) &&
     !recentActivity.data?.length &&
     !recentProjects.data?.length;
+  const canManage = canManageProjects(context.membership.role);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
@@ -124,9 +128,17 @@ export default async function DashboardPage() {
           </span>
           <h2 className="text-lg font-semibold">Your workspace is ready</h2>
           <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Projects and tasks will appear here as soon as the next workspace
-            tools are enabled.
+            Create your first project to organize work, track progress, and
+            build a shared activity history.
           </p>
+          {canManage && (
+            <Link
+              href="/projects?new=1"
+              className="mt-5 inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90"
+            >
+              Create a project
+            </Link>
+          )}
         </section>
       ) : (
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -161,7 +173,12 @@ export default async function DashboardPage() {
                     key={project.id}
                     className="flex items-center justify-between gap-4 py-3 text-sm"
                   >
-                    <span className="truncate">{project.name}</span>
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="truncate font-medium hover:text-primary"
+                    >
+                      {project.name}
+                    </Link>
                     <Badge variant="secondary">{project.status}</Badge>
                   </li>
                 ))}

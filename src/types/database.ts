@@ -6,8 +6,8 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
-type ProjectStatus = "active" | "on_hold" | "completed" | "archived";
+export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
+export type ProjectStatus = "active" | "on_hold" | "completed" | "archived";
 type TaskStatus = "todo" | "in_progress" | "review" | "done" | "cancelled";
 type TaskPriority = "low" | "medium" | "high" | "urgent";
 type AiMessageRole = "user" | "assistant" | "system" | "tool";
@@ -319,3 +319,5 @@ export type Database = {
     CompositeTypes: Record<string, never>;
   };
 };
+
+export type Project = Database["public"]["Tables"]["projects"]["Row"];
