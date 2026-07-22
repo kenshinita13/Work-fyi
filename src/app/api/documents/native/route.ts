@@ -5,21 +5,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getWorkspaceContext } from "@/lib/auth/session";
 import {
   DOCUMENT_BUCKET,
-  MAX_DOCUMENT_BYTES,
   MAX_EDITABLE_DOCUMENT_BYTES,
 } from "@/lib/documents/constants";
-import {
-  validateDocumentFileMetadata,
-  validateDocumentSignature,
-} from "@/lib/documents/files";
 import { canManageProjects } from "@/lib/projects/permissions";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { documentUploadFieldsSchema } from "@/lib/validation/document";
+import { documentCreateSchema } from "@/lib/validation/document";
 
 export const runtime = "nodejs";
-
-const MAX_MULTIPART_BYTES = MAX_DOCUMENT_BYTES + 64 * 1024;
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -36,12 +29,19 @@ function isSameOrigin(request: NextRequest) {
   }
 }
 
+function withExtension(fileName: string, format: "txt" | "md") {
+  const trimmed = fileName.trim();
+  return trimmed.toLowerCase().endsWith(`.${format}`)
+    ? trimmed
+    : `${trimmed}.${format}`;
+}
+
 export async function POST(request: NextRequest) {
   if (!isSameOrigin(request)) return errorResponse("Request rejected.", 403);
 
   const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (contentLength > MAX_MULTIPART_BYTES) {
-    return errorResponse("Documents must be 10 MB or smaller.", 413);
+  if (contentLength > MAX_EDITABLE_DOCUMENT_BYTES + 64 * 1024) {
+    return errorResponse("Editable documents must be 1 MB or smaller.", 413);
   }
 
   const context = await getWorkspaceContext();
@@ -52,41 +52,24 @@ export async function POST(request: NextRequest) {
     return errorResponse("Your workspace role has read-only documents.", 403);
   }
 
-  let formData: FormData;
+  let payload: unknown;
   try {
-    formData = await request.formData();
+    payload = await request.json();
   } catch {
-    return errorResponse("The upload request is invalid.", 400);
+    return errorResponse("The document request is invalid.", 400);
   }
 
-  const file = formData.get("file");
-  if (!(file instanceof File)) {
-    return errorResponse("Choose a document to upload.", 400);
-  }
-
-  const metadata = validateDocumentFileMetadata(file);
-  if (!metadata.success) return errorResponse(metadata.error, 400);
-
-  const signatureError = await validateDocumentSignature(
-    file,
-    metadata.data.extension,
-  );
-  if (signatureError) return errorResponse(signatureError, 400);
-
-  const parsedFields = documentUploadFieldsSchema.safeParse({
-    projectId: formData.get("projectId"),
-    taskId: formData.get("taskId"),
-  });
-  if (!parsedFields.success) {
+  const parsed = documentCreateSchema.safeParse(payload);
+  if (!parsed.success) {
     return errorResponse(
-      parsedFields.error.issues[0]?.message ?? "Invalid document links.",
+      parsed.error.issues[0]?.message ?? "The document request is invalid.",
       400,
     );
   }
 
+  const projectId = parsed.data.projectId || null;
+  const taskId = parsed.data.taskId || null;
   const supabase = await createSupabaseServerClient();
-  const projectId = parsedFields.data.projectId || null;
-  const taskId = parsedFields.data.taskId || null;
   const [projectResult, taskResult] = await Promise.all([
     projectId
       ? supabase
@@ -122,16 +105,16 @@ export async function POST(request: NextRequest) {
   }
 
   const documentId = randomUUID();
-  const storedMimeType =
-    metadata.data.extension === "md"
+  const fileName = withExtension(parsed.data.fileName, parsed.data.format);
+  const mimeType =
+    parsed.data.format === "md"
       ? ("text/markdown" as const)
-      : metadata.data.mimeType;
-  const editableContent =
-    (metadata.data.extension === "txt" || metadata.data.extension === "md") &&
-    file.size <= MAX_EDITABLE_DOCUMENT_BYTES
-      ? await file.text()
-      : null;
-  const storagePath = `${context.workspace.id}/${documentId}/source.${metadata.data.extension}`;
+      : ("text/plain" as const);
+  const bytes = new TextEncoder().encode(parsed.data.content);
+  const storageBytes =
+    bytes.byteLength === 0 ? new TextEncoder().encode("\n") : bytes;
+  const storagePath = `${context.workspace.id}/${documentId}/source.${parsed.data.format}`;
+  const editedAt = new Date().toISOString();
   const admin = getSupabaseAdminClient();
   const { error: documentError } = await admin.from("documents").insert({
     id: documentId,
@@ -139,50 +122,49 @@ export async function POST(request: NextRequest) {
     project_id: projectId,
     task_id: taskId,
     uploaded_by: context.claims.sub,
-    file_name: file.name.trim(),
+    file_name: fileName,
     storage_path: storagePath,
-    mime_type: storedMimeType,
-    file_size: file.size,
-    editable_content: editableContent,
-    last_edited_by: editableContent === null ? null : context.claims.sub,
-    last_edited_at: editableContent === null ? null : new Date().toISOString(),
+    mime_type: mimeType,
+    file_size: bytes.byteLength,
+    editable_content: parsed.data.content,
+    last_edited_by: context.claims.sub,
+    last_edited_at: editedAt,
   });
 
   if (documentError) {
-    console.error("Document registration failed", {
+    console.error("Native document registration failed", {
       code: documentError.code,
       message: documentError.message,
     });
-    return errorResponse("We could not register the document.", 500);
+    return errorResponse("We could not create the document.", 500);
   }
 
   const { error: uploadError } = await supabase.storage
     .from(DOCUMENT_BUCKET)
-    .upload(storagePath, file, {
+    .upload(storagePath, storageBytes, {
       cacheControl: "3600",
-      contentType: storedMimeType,
+      contentType: mimeType,
       upsert: false,
     });
 
   if (uploadError) {
     await admin.from("documents").delete().eq("id", documentId);
-    return errorResponse("The document upload could not be completed.", 502);
+    return errorResponse("The document could not be saved.", 502);
   }
 
   await admin.from("activity_logs").insert({
     workspace_id: context.workspace.id,
     actor_id: context.claims.sub,
-    action: "document.uploaded",
+    action: "document.created",
     resource_type: "document",
     resource_id: documentId,
     metadata: {
-      file_name: file.name.trim(),
-      mime_type: storedMimeType,
-      file_size: file.size,
+      file_name: fileName,
+      mime_type: mimeType,
       project_id: projectId,
       task_id: taskId,
     },
   });
 
-  return NextResponse.json({ id: documentId }, { status: 201 });
+  return NextResponse.json({ id: documentId, revision: 1 }, { status: 201 });
 }

@@ -1,10 +1,11 @@
-import { FileText, ShieldCheck } from "lucide-react";
+import { FilePlus2, FileText, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { DocumentActions } from "@/components/documents/document-actions";
 import { DocumentUploadDialog } from "@/components/documents/document-upload-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -14,6 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getWorkspaceContext } from "@/lib/auth/session";
+import {
+  canEditDocument,
+  canManageDocumentSharing,
+} from "@/lib/documents/permissions";
 import { canManageProjects } from "@/lib/projects/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -48,29 +53,34 @@ export default async function DocumentsPage({
 
   const params = await searchParams;
   const supabase = await createSupabaseServerClient();
-  const [documentsResult, projectsResult, tasksResult] = await Promise.all([
-    supabase
-      .from("documents")
-      .select(
-        "id, project_id, task_id, file_name, mime_type, file_size, summary_draft, summary_generated_at, created_at",
-      )
-      .eq("workspace_id", context.workspace.id)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("projects")
-      .select("id, name")
-      .eq("workspace_id", context.workspace.id)
-      .neq("status", "archived")
-      .order("name"),
-    supabase
-      .from("tasks")
-      .select("id, title, project_id")
-      .eq("workspace_id", context.workspace.id)
-      .neq("status", "cancelled")
-      .order("updated_at", { ascending: false })
-      .limit(200),
-  ]);
+  const [documentsResult, projectsResult, tasksResult, sharesResult] =
+    await Promise.all([
+      supabase
+        .from("documents")
+        .select(
+          "id, project_id, task_id, uploaded_by, file_name, mime_type, file_size, visibility, editable_content, summary_draft, summary_generated_at, created_at",
+        )
+        .eq("workspace_id", context.workspace.id)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("projects")
+        .select("id, name")
+        .eq("workspace_id", context.workspace.id)
+        .neq("status", "archived")
+        .order("name"),
+      supabase
+        .from("tasks")
+        .select("id, title, project_id")
+        .eq("workspace_id", context.workspace.id)
+        .neq("status", "cancelled")
+        .order("updated_at", { ascending: false })
+        .limit(200),
+      supabase
+        .from("document_shares")
+        .select("document_id, permission")
+        .eq("user_id", context.claims.sub),
+    ]);
 
   const documents = documentsResult.data ?? [];
   const projects = projectsResult.data ?? [];
@@ -79,6 +89,10 @@ export default async function DocumentsPage({
     projects.map((project) => [project.id, project.name]),
   );
   const taskNames = new Map(tasks.map((task) => [task.id, task.title]));
+  const ownSharePermissions = new Map(
+    sharesResult.data?.map((share) => [share.document_id, share.permission]) ??
+      [],
+  );
   const canManage = canManageProjects(context.membership.role);
 
   return (
@@ -99,17 +113,25 @@ export default async function DocumentsPage({
             Private workspace files
           </Badge>
           {canManage && (
-            <DocumentUploadDialog
-              projects={projects}
-              tasks={tasks.map((task) => ({
-                id: task.id,
-                title: task.title,
-                projectName: task.project_id
-                  ? (projectNames.get(task.project_id) ?? null)
-                  : null,
-              }))}
-              defaultOpen={params.new === "1"}
-            />
+            <>
+              <Button variant="outline" asChild>
+                <Link href="/documents/new">
+                  <FilePlus2 className="size-4" aria-hidden="true" />
+                  New document
+                </Link>
+              </Button>
+              <DocumentUploadDialog
+                projects={projects}
+                tasks={tasks.map((task) => ({
+                  id: task.id,
+                  title: task.title,
+                  projectName: task.project_id
+                    ? (projectNames.get(task.project_id) ?? null)
+                    : null,
+                }))}
+                defaultOpen={params.new === "1"}
+              />
+            </>
           )}
         </div>
       </div>
@@ -128,65 +150,93 @@ export default async function DocumentsPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {documents.map((document) => (
-                <TableRow key={document.id}>
-                  <TableCell>
-                    <div className="min-w-48">
-                      <p
-                        className="max-w-sm truncate font-medium"
-                        title={document.file_name}
-                      >
-                        {document.file_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {fileTypeLabel(document.mime_type)}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="grid min-w-36 gap-1 text-sm">
-                      {document.project_id && (
+              {documents.map((document) => {
+                const ownPermission =
+                  ownSharePermissions.get(document.id) ?? null;
+                const canEdit = canEditDocument(
+                  context.membership.role,
+                  context.claims.sub,
+                  {
+                    uploadedBy: document.uploaded_by,
+                    visibility: document.visibility,
+                  },
+                  ownPermission,
+                );
+                const canDelete = canManageDocumentSharing(
+                  context.membership.role,
+                  context.claims.sub,
+                  document.uploaded_by,
+                );
+
+                return (
+                  <TableRow key={document.id}>
+                    <TableCell>
+                      <div className="min-w-48">
                         <Link
-                          href={`/projects/${document.project_id}`}
-                          className="text-primary hover:underline"
+                          href={`/documents/${document.id}`}
+                          className="max-w-sm truncate font-medium"
+                          title={document.file_name}
                         >
-                          {projectNames.get(document.project_id) ?? "Project"}
+                          {document.file_name}
                         </Link>
+                        <p className="text-xs text-muted-foreground">
+                          {fileTypeLabel(document.mime_type)}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="grid min-w-36 gap-1 text-sm">
+                        {document.project_id && (
+                          <Link
+                            href={`/projects/${document.project_id}`}
+                            className="text-primary hover:underline"
+                          >
+                            {projectNames.get(document.project_id) ?? "Project"}
+                          </Link>
+                        )}
+                        {document.task_id && (
+                          <Link
+                            href={`/tasks/${document.task_id}`}
+                            className="text-primary hover:underline"
+                          >
+                            {taskNames.get(document.task_id) ?? "Task"}
+                          </Link>
+                        )}
+                        {!document.project_id && !document.task_id && (
+                          <span className="text-muted-foreground">
+                            Workspace
+                          </span>
+                        )}
+                        <Badge variant="outline" className="w-fit font-normal">
+                          {document.visibility === "restricted"
+                            ? "Restricted"
+                            : "Workspace"}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatFileSize(document.file_size)}</TableCell>
+                    <TableCell>{formatDate(document.created_at)}</TableCell>
+                    <TableCell>
+                      {document.summary_draft ? (
+                        <Badge variant="secondary">Draft</Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          None
+                        </span>
                       )}
-                      {document.task_id && (
-                        <Link
-                          href={`/tasks/${document.task_id}`}
-                          className="text-primary hover:underline"
-                        >
-                          {taskNames.get(document.task_id) ?? "Task"}
-                        </Link>
-                      )}
-                      {!document.project_id && !document.task_id && (
-                        <span className="text-muted-foreground">Workspace</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{formatFileSize(document.file_size)}</TableCell>
-                  <TableCell>{formatDate(document.created_at)}</TableCell>
-                  <TableCell>
-                    {document.summary_draft ? (
-                      <Badge variant="secondary">Draft</Badge>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        None
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <DocumentActions
-                      documentId={document.id}
-                      fileName={document.file_name}
-                      summary={document.summary_draft}
-                      canManage={canManage}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <DocumentActions
+                        documentId={document.id}
+                        fileName={document.file_name}
+                        summary={document.summary_draft}
+                        canSummarize={canEdit}
+                        canDelete={canDelete}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {documents.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="h-40 text-center">

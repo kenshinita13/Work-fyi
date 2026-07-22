@@ -60,7 +60,7 @@ export function DocumentUploadDialog({
       const payload = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Upload failed.");
 
-      toast.success("Document uploaded.");
+      toast.success("Document imported.");
       setOpen(false);
       router.replace("/documents");
       router.refresh();
@@ -80,12 +80,12 @@ export function DocumentUploadDialog({
       <DialogTrigger asChild>
         <Button>
           <FileUp className="size-4" aria-hidden="true" />
-          Upload document
+          Import file
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Upload document</DialogTitle>
+          <DialogTitle>Import file</DialogTitle>
           <DialogDescription>
             Add a PDF, DOCX, TXT, or Markdown file up to 10 MB.
           </DialogDescription>
@@ -146,7 +146,7 @@ export function DocumentUploadDialog({
           <div className="ml-auto w-full sm:w-36">
             <Button type="submit" className="w-full" disabled={pending}>
               <FileUp className="size-4" aria-hidden="true" />
-              {pending ? "Uploading..." : "Upload"}
+              {pending ? "Importing..." : "Import"}
             </Button>
           </div>
         </form>

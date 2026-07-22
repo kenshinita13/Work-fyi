@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { validateDocumentFileMetadata } from "@/lib/documents/files";
 import {
+  documentCreateSchema,
+  documentSaveSchema,
+  documentSharingSchema,
   documentSummaryDraftSchema,
   documentUploadFieldsSchema,
 } from "@/lib/validation/document";
@@ -60,6 +63,41 @@ describe("document validation", () => {
       success: true,
       data: { projectId: undefined, taskId: undefined },
     });
+  });
+
+  it("accepts an empty native Markdown document", () => {
+    const result = documentCreateSchema.safeParse({
+      fileName: "handoff",
+      format: "md",
+      content: "",
+      projectId: "none",
+      taskId: "none",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects editable content larger than one megabyte", () => {
+    const result = documentSaveSchema.safeParse({
+      fileName: "oversized.md",
+      content: "x".repeat(1024 * 1024 + 1),
+      expectedRevision: 1,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects duplicate document share targets", () => {
+    const userId = "11111111-1111-4111-8111-111111111111";
+    const result = documentSharingSchema.safeParse({
+      visibility: "restricted",
+      shares: [
+        { userId, permission: "viewer" },
+        { userId, permission: "editor" },
+      ],
+    });
+
+    expect(result.success).toBe(false);
   });
 
   it("accepts a bounded summary draft", () => {

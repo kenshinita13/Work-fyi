@@ -5,6 +5,7 @@ import {
   DOCUMENT_BUCKET,
   type DocumentMimeType,
 } from "@/lib/documents/constants";
+import { canEditDocument } from "@/lib/documents/permissions";
 import { generateDocumentSummary } from "@/lib/documents/summary";
 import { extractDocumentText } from "@/lib/documents/text";
 import { getAiEnv } from "@/lib/env/server";
@@ -55,14 +56,37 @@ export async function POST(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: document } = await supabase
-    .from("documents")
-    .select("id, file_name, storage_path, mime_type")
-    .eq("id", parsed.data.documentId)
-    .eq("workspace_id", context.workspace.id)
-    .is("deleted_at", null)
-    .maybeSingle();
+  const [{ data: document }, { data: ownShare }] = await Promise.all([
+    supabase
+      .from("documents")
+      .select(
+        "id, file_name, storage_path, mime_type, editable_content, uploaded_by, visibility",
+      )
+      .eq("id", parsed.data.documentId)
+      .eq("workspace_id", context.workspace.id)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    supabase
+      .from("document_shares")
+      .select("permission")
+      .eq("document_id", parsed.data.documentId)
+      .eq("user_id", context.claims.sub)
+      .maybeSingle(),
+  ]);
   if (!document) return errorResponse("Document not found.", 404);
+  if (
+    !canEditDocument(
+      context.membership.role,
+      context.claims.sub,
+      {
+        uploadedBy: document.uploaded_by,
+        visibility: document.visibility,
+      },
+      ownShare?.permission ?? null,
+    )
+  ) {
+    return errorResponse("You have read-only access to this document.", 403);
+  }
 
   const admin = getSupabaseAdminClient();
   const { data: usageId, error: usageError } = await admin.rpc(
@@ -89,26 +113,36 @@ export async function POST(
     return errorResponse("AI summaries are not available right now.", 503);
   }
 
-  const { data: file, error: downloadError } = await supabase.storage
-    .from(DOCUMENT_BUCKET)
-    .download(document.storage_path);
-  if (downloadError || !file) {
-    await admin.from("ai_usage").update({ status: "failed" }).eq("id", usageId);
-    return errorResponse("The document file could not be read.", 502);
-  }
-
   let text: string;
-  try {
-    text = await extractDocumentText(
-      await file.arrayBuffer(),
-      document.mime_type as DocumentMimeType,
-    );
-  } catch {
-    await admin.from("ai_usage").update({ status: "failed" }).eq("id", usageId);
-    return errorResponse(
-      "We could not extract enough readable text from this document.",
-      422,
-    );
+  if (document.editable_content !== null) {
+    text = document.editable_content;
+  } else {
+    const { data: file, error: downloadError } = await supabase.storage
+      .from(DOCUMENT_BUCKET)
+      .download(document.storage_path);
+    if (downloadError || !file) {
+      await admin
+        .from("ai_usage")
+        .update({ status: "failed" })
+        .eq("id", usageId);
+      return errorResponse("The document file could not be read.", 502);
+    }
+
+    try {
+      text = await extractDocumentText(
+        await file.arrayBuffer(),
+        document.mime_type as DocumentMimeType,
+      );
+    } catch {
+      await admin
+        .from("ai_usage")
+        .update({ status: "failed" })
+        .eq("id", usageId);
+      return errorResponse(
+        "We could not extract enough readable text from this document.",
+        422,
+      );
+    }
   }
 
   try {

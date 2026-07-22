@@ -5,7 +5,9 @@ import {
   Bell,
   CalendarDays,
   ChevronsUpDown,
+  FilePlus2,
   FileText,
+  FileUp,
   FolderKanban,
   LayoutDashboard,
   Layers3,
@@ -243,9 +245,15 @@ export function AppShell({
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link href="/documents/new">
+                      <FilePlus2 className="size-4" aria-hidden="true" />
+                      New document
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/documents?new=1">
-                      <FileText className="size-4" aria-hidden="true" />
-                      Upload document
+                      <FileUp className="size-4" aria-hidden="true" />
+                      Import file
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>

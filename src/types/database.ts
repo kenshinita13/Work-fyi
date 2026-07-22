@@ -22,6 +22,8 @@ export type DocumentSummary = {
   summary: string;
   highlights: string[];
 };
+export type DocumentVisibility = "workspace" | "restricted";
+export type DocumentSharePermission = "viewer" | "editor";
 type AiMessageRole = "user" | "assistant" | "system" | "tool";
 export type PrimaryRole =
   | "virtual_assistant"
@@ -360,6 +362,11 @@ export type Database = {
           storage_path: string;
           mime_type: DocumentMimeType;
           file_size: number;
+          visibility: DocumentVisibility;
+          editable_content: string | null;
+          content_revision: number;
+          last_edited_by: string | null;
+          last_edited_at: string | null;
           summary_draft: DocumentSummary | null;
           summary_model: string | null;
           summary_generated_at: string | null;
@@ -376,6 +383,11 @@ export type Database = {
           storage_path: string;
           mime_type: DocumentMimeType;
           file_size: number;
+          visibility?: DocumentVisibility;
+          editable_content?: string | null;
+          content_revision?: number;
+          last_edited_by?: string | null;
+          last_edited_at?: string | null;
           summary_draft?: DocumentSummary | null;
           summary_model?: string | null;
           summary_generated_at?: string | null;
@@ -389,11 +401,41 @@ export type Database = {
             Database["public"]["Tables"]["documents"]["Insert"],
             | "project_id"
             | "task_id"
+            | "file_name"
+            | "file_size"
+            | "visibility"
+            | "editable_content"
+            | "content_revision"
+            | "last_edited_by"
+            | "last_edited_at"
             | "summary_draft"
             | "summary_model"
             | "summary_generated_at"
             | "deleted_at"
             | "deleted_by"
+          >
+        >;
+        Relationships: [];
+      };
+      document_shares: {
+        Row: Timestamped & {
+          document_id: string;
+          user_id: string;
+          permission: DocumentSharePermission;
+          shared_by: string;
+        };
+        Insert: {
+          document_id: string;
+          user_id: string;
+          permission: DocumentSharePermission;
+          shared_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Pick<
+            Database["public"]["Tables"]["document_shares"]["Insert"],
+            "permission"
           >
         >;
         Relationships: [];
@@ -438,6 +480,16 @@ export type Database = {
           input_model: string;
         };
         Returns: string;
+      };
+      set_document_sharing: {
+        Args: {
+          input_document_id: string;
+          input_workspace_id: string;
+          input_actor_id: string;
+          input_visibility: DocumentVisibility;
+          input_shares: Json;
+        };
+        Returns: number;
       };
     };
     Enums: Record<string, never>;

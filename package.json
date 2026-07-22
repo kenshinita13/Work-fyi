@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify:documents": "node --env-file=.env.local scripts/verify-document-collaboration.mjs",
     "seed:demo": "node --env-file=.env.local scripts/seed-demo-accounts.mjs",
     "format": "prettier --check .",
     "format:write": "prettier --write ."

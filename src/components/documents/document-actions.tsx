@@ -42,12 +42,14 @@ export function DocumentActions({
   documentId,
   fileName,
   summary,
-  canManage,
+  canSummarize,
+  canDelete,
 }: {
   documentId: string;
   fileName: string;
   summary: DocumentSummary | null;
-  canManage: boolean;
+  canSummarize: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const [summarizing, setSummarizing] = useState(false);
@@ -143,58 +145,64 @@ export function DocumentActions({
         </Dialog>
       )}
 
-      {canManage && (
+      {(canSummarize || canDelete) && (
         <>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            title={
-              summary ? "Regenerate summary draft" : "Generate summary draft"
-            }
-            disabled={summarizing}
-            onClick={summarize}
-          >
-            <Sparkles className="size-4" aria-hidden="true" />
-            <span className="sr-only">
-              {summary ? "Regenerate summary draft" : "Generate summary draft"}
-            </span>
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                title="Delete document"
-                disabled={deleting}
-              >
-                <Trash2
-                  className="size-4 text-destructive"
-                  aria-hidden="true"
-                />
-                <span className="sr-only">Delete {fileName}</span>
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete document?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {fileName} will be removed from this workspace. This action
-                  cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  variant="destructive"
-                  onClick={removeDocument}
+          {canSummarize && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={
+                summary ? "Regenerate summary draft" : "Generate summary draft"
+              }
+              disabled={summarizing}
+              onClick={summarize}
+            >
+              <Sparkles className="size-4" aria-hidden="true" />
+              <span className="sr-only">
+                {summary
+                  ? "Regenerate summary draft"
+                  : "Generate summary draft"}
+              </span>
+            </Button>
+          )}
+          {canDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title="Delete document"
+                  disabled={deleting}
                 >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <Trash2
+                    className="size-4 text-destructive"
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">Delete {fileName}</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete document?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {fileName} will be removed from this workspace. This action
+                    cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    onClick={removeDocument}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </>
       )}
     </div>
