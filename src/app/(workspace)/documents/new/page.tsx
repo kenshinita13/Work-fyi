@@ -2,7 +2,7 @@ import { ArrowLeft, FilePlus2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { DocumentEditor } from "@/components/documents/document-editor";
+import { DocumentCreateForm } from "@/components/documents/document-create-form";
 import { Button } from "@/components/ui/button";
 import { getWorkspaceContext } from "@/lib/auth/session";
 import { canManageProjects } from "@/lib/projects/permissions";
@@ -51,7 +51,7 @@ export default async function NewDocumentPage() {
           </p>
         </div>
       </div>
-      <DocumentEditor
+      <DocumentCreateForm
         projects={projects}
         tasks={(tasksResult.data ?? []).map((task) => ({
           id: task.id,

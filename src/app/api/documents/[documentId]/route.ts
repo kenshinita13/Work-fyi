@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getWorkspaceContext } from "@/lib/auth/session";
 import { DOCUMENT_BUCKET } from "@/lib/documents/constants";
+import { exportOfficeEditorState } from "@/lib/documents/office";
+import { parseOfficeEditorState } from "@/lib/documents/office-state";
 import {
   canEditDocument,
   canManageDocumentSharing,
@@ -63,7 +65,7 @@ export async function PATCH(
     supabase
       .from("documents")
       .select(
-        "id, uploaded_by, visibility, mime_type, editable_content, content_revision",
+        "id, uploaded_by, visibility, mime_type, editable_content, editor_kind, editor_state, content_revision",
       )
       .eq("id", parsedId.data.documentId)
       .eq("workspace_id", context.workspace.id)
@@ -91,16 +93,44 @@ export async function PATCH(
   ) {
     return errorResponse("You have read-only access to this document.", 403);
   }
-  if (document.editable_content === null) {
+  if (!document.editor_kind) {
     return errorResponse("This file type cannot be edited in the app.", 400);
   }
+  if (parsedBody.data.editorKind !== document.editor_kind) {
+    return errorResponse("The editor type does not match this document.", 400);
+  }
 
-  const extension = document.mime_type === "text/markdown" ? ".md" : ".txt";
+  const extension =
+    document.editor_kind === "rich_document"
+      ? ".docx"
+      : document.editor_kind === "spreadsheet"
+        ? ".xlsx"
+        : document.editor_kind === "presentation"
+          ? ".pptx"
+          : document.mime_type === "text/markdown"
+            ? ".md"
+            : ".txt";
   const requestedName = parsedBody.data.fileName.trim();
   const fileName = requestedName.toLowerCase().endsWith(extension)
     ? requestedName
     : `${requestedName}${extension}`;
-  const bytes = new TextEncoder().encode(parsedBody.data.content);
+  const officeState =
+    parsedBody.data.editorKind === "text"
+      ? null
+      : parseOfficeEditorState(
+          parsedBody.data.editorKind,
+          parsedBody.data.editorState,
+        );
+  if (officeState && !officeState.success) {
+    return errorResponse(officeState.error, 400);
+  }
+  const editableContent =
+    parsedBody.data.editorKind === "text" ? parsedBody.data.content : null;
+  const editorState = officeState?.success ? officeState.data : null;
+  const bytes =
+    parsedBody.data.editorKind === "text"
+      ? new TextEncoder().encode(parsedBody.data.content)
+      : await exportOfficeEditorState(parsedBody.data.editorKind, editorState!);
   const editedAt = new Date().toISOString();
   const admin = getSupabaseAdminClient();
   const { data: updated, error: updateError } = await admin
@@ -108,7 +138,8 @@ export async function PATCH(
     .update({
       file_name: fileName,
       file_size: bytes.byteLength,
-      editable_content: parsedBody.data.content,
+      editable_content: editableContent,
+      editor_state: editorState,
       content_revision: parsedBody.data.expectedRevision + 1,
       last_edited_by: context.claims.sub,
       last_edited_at: editedAt,

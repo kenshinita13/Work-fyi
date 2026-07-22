@@ -6,7 +6,14 @@ import { getWorkspaceContext } from "@/lib/auth/session";
 import {
   DOCUMENT_BUCKET,
   MAX_EDITABLE_DOCUMENT_BYTES,
+  OFFICE_DOCUMENT_MIME_TYPES,
 } from "@/lib/documents/constants";
+import { exportOfficeEditorState } from "@/lib/documents/office";
+import {
+  createPresentationState,
+  createRichDocumentState,
+  createSpreadsheetState,
+} from "@/lib/documents/office-types";
 import { canManageProjects } from "@/lib/projects/permissions";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -29,7 +36,9 @@ function isSameOrigin(request: NextRequest) {
   }
 }
 
-function withExtension(fileName: string, format: "txt" | "md") {
+type NativeFormat = "txt" | "md" | "docx" | "xlsx" | "pptx";
+
+function withExtension(fileName: string, format: NativeFormat) {
   const trimmed = fileName.trim();
   return trimmed.toLowerCase().endsWith(`.${format}`)
     ? trimmed
@@ -41,7 +50,7 @@ export async function POST(request: NextRequest) {
 
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > MAX_EDITABLE_DOCUMENT_BYTES + 64 * 1024) {
-    return errorResponse("Editable documents must be 1 MB or smaller.", 413);
+    return errorResponse("The document request is too large.", 413);
   }
 
   const context = await getWorkspaceContext();
@@ -106,11 +115,35 @@ export async function POST(request: NextRequest) {
 
   const documentId = randomUUID();
   const fileName = withExtension(parsed.data.fileName, parsed.data.format);
+  const format = parsed.data.format;
+  const officeState =
+    format === "docx"
+      ? createRichDocumentState()
+      : format === "xlsx"
+        ? createSpreadsheetState()
+        : format === "pptx"
+          ? createPresentationState()
+          : null;
+  const officeKind =
+    format === "docx"
+      ? ("rich_document" as const)
+      : format === "xlsx"
+        ? ("spreadsheet" as const)
+        : format === "pptx"
+          ? ("presentation" as const)
+          : null;
+  const editorKind = officeKind ?? ("text" as const);
   const mimeType =
-    parsed.data.format === "md"
+    format === "md"
       ? ("text/markdown" as const)
-      : ("text/plain" as const);
-  const bytes = new TextEncoder().encode(parsed.data.content);
+      : format === "txt"
+        ? ("text/plain" as const)
+        : OFFICE_DOCUMENT_MIME_TYPES[format];
+  const editableContent = "content" in parsed.data ? parsed.data.content : null;
+  const bytes =
+    officeState && officeKind
+      ? await exportOfficeEditorState(officeKind, officeState)
+      : new TextEncoder().encode(editableContent ?? "");
   const storageBytes =
     bytes.byteLength === 0 ? new TextEncoder().encode("\n") : bytes;
   const storagePath = `${context.workspace.id}/${documentId}/source.${parsed.data.format}`;
@@ -126,7 +159,9 @@ export async function POST(request: NextRequest) {
     storage_path: storagePath,
     mime_type: mimeType,
     file_size: bytes.byteLength,
-    editable_content: parsed.data.content,
+    editable_content: editableContent,
+    editor_kind: editorKind,
+    editor_state: officeState,
     last_edited_by: context.claims.sub,
     last_edited_at: editedAt,
   });

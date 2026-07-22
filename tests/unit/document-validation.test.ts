@@ -77,8 +77,32 @@ describe("document validation", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts native Office file creation", () => {
+    for (const format of ["docx", "xlsx", "pptx"] as const) {
+      expect(
+        documentCreateSchema.safeParse({
+          fileName: "Quarterly plan",
+          format,
+          projectId: "none",
+          taskId: "none",
+        }).success,
+      ).toBe(true);
+    }
+  });
+
+  it("accepts XLSX file metadata", () => {
+    const result = validateDocumentFileMetadata({
+      name: "forecast.xlsx",
+      size: 4096,
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("rejects editable content larger than one megabyte", () => {
     const result = documentSaveSchema.safeParse({
+      editorKind: "text",
       fileName: "oversized.md",
       content: "x".repeat(1024 * 1024 + 1),
       expectedRevision: 1,

@@ -6,6 +6,8 @@ import {
   type DocumentMimeType,
 } from "@/lib/documents/constants";
 import { canEditDocument } from "@/lib/documents/permissions";
+import { officeStateText } from "@/lib/documents/office";
+import { parseOfficeEditorState } from "@/lib/documents/office-state";
 import { generateDocumentSummary } from "@/lib/documents/summary";
 import { extractDocumentText } from "@/lib/documents/text";
 import { getAiEnv } from "@/lib/env/server";
@@ -60,7 +62,7 @@ export async function POST(
     supabase
       .from("documents")
       .select(
-        "id, file_name, storage_path, mime_type, editable_content, uploaded_by, visibility",
+        "id, file_name, storage_path, mime_type, editable_content, editor_kind, editor_state, uploaded_by, visibility",
       )
       .eq("id", parsed.data.documentId)
       .eq("workspace_id", context.workspace.id)
@@ -116,6 +118,23 @@ export async function POST(
   let text: string;
   if (document.editable_content !== null) {
     text = document.editable_content;
+  } else if (
+    document.editor_kind &&
+    document.editor_kind !== "text" &&
+    document.editor_state
+  ) {
+    const state = parseOfficeEditorState(
+      document.editor_kind,
+      document.editor_state,
+    );
+    if (!state.success) {
+      await admin
+        .from("ai_usage")
+        .update({ status: "failed" })
+        .eq("id", usageId);
+      return errorResponse("The document content could not be read.", 422);
+    }
+    text = officeStateText(state.data);
   } else {
     const { data: file, error: downloadError } = await supabase.storage
       .from(DOCUMENT_BUCKET)

@@ -9,6 +9,10 @@ const extensionMimeTypes: Record<string, readonly DocumentMimeType[]> = {
   docx: [
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ],
+  xlsx: ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  pptx: [
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ],
   txt: ["text/plain"],
   md: ["text/markdown", "text/plain"],
 };
@@ -45,7 +49,7 @@ export function validateDocumentFileMetadata(
   if (!extension || !(extension in extensionMimeTypes)) {
     return {
       success: false,
-      error: "Upload a PDF, DOCX, TXT, or Markdown file.",
+      error: "Upload a PDF, DOCX, XLSX, PPTX, TXT, or Markdown file.",
     };
   }
 
@@ -83,8 +87,11 @@ export async function validateDocumentSignature(
     return "The PDF signature is invalid.";
   }
 
-  if (extension === "docx" && !(bytes[0] === 0x50 && bytes[1] === 0x4b)) {
-    return "The DOCX container is invalid.";
+  if (
+    (extension === "docx" || extension === "xlsx" || extension === "pptx") &&
+    !(bytes[0] === 0x50 && bytes[1] === 0x4b)
+  ) {
+    return `The ${extension.toUpperCase()} container is invalid.`;
   }
 
   if (extension === "txt" || extension === "md") {

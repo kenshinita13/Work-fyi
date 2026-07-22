@@ -12,10 +12,13 @@ import {
   validateDocumentFileMetadata,
   validateDocumentSignature,
 } from "@/lib/documents/files";
+import { importRichDocument, importSpreadsheet } from "@/lib/documents/office";
+import { parseOfficeEditorState } from "@/lib/documents/office-state";
 import { canManageProjects } from "@/lib/projects/permissions";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { documentUploadFieldsSchema } from "@/lib/validation/document";
+import type { Json } from "@/types/database";
 
 export const runtime = "nodejs";
 
@@ -131,6 +134,32 @@ export async function POST(request: NextRequest) {
     file.size <= MAX_EDITABLE_DOCUMENT_BYTES
       ? await file.text()
       : null;
+  let editorKind: "text" | "rich_document" | "spreadsheet" | null =
+    editableContent === null ? null : "text";
+  let editorState: unknown = null;
+
+  if (
+    metadata.data.extension === "docx" ||
+    metadata.data.extension === "xlsx"
+  ) {
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      editorKind =
+        metadata.data.extension === "docx" ? "rich_document" : "spreadsheet";
+      editorState =
+        editorKind === "rich_document"
+          ? await importRichDocument(buffer)
+          : await importSpreadsheet(buffer);
+      const parsedState = parseOfficeEditorState(editorKind, editorState);
+      if (!parsedState.success) return errorResponse(parsedState.error, 400);
+      editorState = parsedState.data;
+    } catch {
+      return errorResponse(
+        `The ${metadata.data.extension.toUpperCase()} file could not be converted for editing.`,
+        400,
+      );
+    }
+  }
   const storagePath = `${context.workspace.id}/${documentId}/source.${metadata.data.extension}`;
   const admin = getSupabaseAdminClient();
   const { error: documentError } = await admin.from("documents").insert({
@@ -144,8 +173,10 @@ export async function POST(request: NextRequest) {
     mime_type: storedMimeType,
     file_size: file.size,
     editable_content: editableContent,
-    last_edited_by: editableContent === null ? null : context.claims.sub,
-    last_edited_at: editableContent === null ? null : new Date().toISOString(),
+    editor_kind: editorKind,
+    editor_state: editorState as Json | null,
+    last_edited_by: editorKind === null ? null : context.claims.sub,
+    last_edited_at: editorKind === null ? null : new Date().toISOString(),
   });
 
   if (documentError) {

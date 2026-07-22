@@ -87,7 +87,7 @@ export function DocumentUploadDialog({
         <DialogHeader>
           <DialogTitle>Import file</DialogTitle>
           <DialogDescription>
-            Add a PDF, DOCX, TXT, or Markdown file up to 10 MB.
+            Add a PDF, DOCX, XLSX, PPTX, TXT, or Markdown file up to 10 MB.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-5">
@@ -97,7 +97,7 @@ export function DocumentUploadDialog({
               id="document-file"
               name="file"
               type="file"
-              accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
+              accept=".pdf,.docx,.xlsx,.pptx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown"
               disabled={pending}
               required
             />

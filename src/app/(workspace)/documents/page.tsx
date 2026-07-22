@@ -39,6 +39,8 @@ function formatDate(value: string) {
 function fileTypeLabel(mimeType: string) {
   if (mimeType === "application/pdf") return "PDF";
   if (mimeType.includes("wordprocessingml")) return "DOCX";
+  if (mimeType.includes("spreadsheetml")) return "XLSX";
+  if (mimeType.includes("presentationml")) return "PPTX";
   if (mimeType === "text/markdown") return "Markdown";
   return "Text";
 }

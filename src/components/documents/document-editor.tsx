@@ -77,7 +77,12 @@ export function DocumentEditor({
           body: JSON.stringify(
             creating
               ? { fileName, format, content, projectId, taskId }
-              : { fileName, content, expectedRevision: revision },
+              : {
+                  editorKind: "text",
+                  fileName,
+                  content,
+                  expectedRevision: revision,
+                },
           ),
         },
       );

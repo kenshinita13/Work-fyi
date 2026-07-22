@@ -16,6 +16,8 @@ export type AiTaskPlanDraftStatus = "pending" | "approved" | "expired";
 export type DocumentMimeType =
   | "application/pdf"
   | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  | "application/vnd.openxmlformats-officedocument.presentationml.presentation"
   | "text/plain"
   | "text/markdown";
 export type DocumentSummary = {
@@ -24,6 +26,8 @@ export type DocumentSummary = {
 };
 export type DocumentVisibility = "workspace" | "restricted";
 export type DocumentSharePermission = "viewer" | "editor";
+export type DocumentEditorKind =
+  "text" | "rich_document" | "spreadsheet" | "presentation";
 type AiMessageRole = "user" | "assistant" | "system" | "tool";
 export type PrimaryRole =
   | "virtual_assistant"
@@ -364,6 +368,8 @@ export type Database = {
           file_size: number;
           visibility: DocumentVisibility;
           editable_content: string | null;
+          editor_kind: DocumentEditorKind | null;
+          editor_state: Json | null;
           content_revision: number;
           last_edited_by: string | null;
           last_edited_at: string | null;
@@ -385,6 +391,8 @@ export type Database = {
           file_size: number;
           visibility?: DocumentVisibility;
           editable_content?: string | null;
+          editor_kind?: DocumentEditorKind | null;
+          editor_state?: Json | null;
           content_revision?: number;
           last_edited_by?: string | null;
           last_edited_at?: string | null;
@@ -405,6 +413,8 @@ export type Database = {
             | "file_size"
             | "visibility"
             | "editable_content"
+            | "editor_kind"
+            | "editor_state"
             | "content_revision"
             | "last_edited_by"
             | "last_edited_at"

@@ -25,13 +25,21 @@
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.7",
     "@tanstack/react-query": "^5.101.2",
+    "@tiptap/extension-text-align": "3.28.0",
+    "@tiptap/html": "3.28.0",
+    "@tiptap/pm": "3.28.0",
+    "@tiptap/react": "3.28.0",
+    "@tiptap/starter-kit": "3.28.0",
     "ai": "^6.0.231",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "docx": "9.7.1",
+    "exceljs": "4.4.0",
     "lucide-react": "^1.25.0",
     "mammoth": "^1.12.0",
     "next": "16.2.10",
     "next-themes": "^0.4.6",
+    "pptxgenjs": "4.0.1",
     "radix-ui": "^1.6.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -62,5 +70,10 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
   }
 }

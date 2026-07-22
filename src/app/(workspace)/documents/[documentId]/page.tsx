@@ -5,6 +5,9 @@ import { notFound, redirect } from "next/navigation";
 import { DocumentActions } from "@/components/documents/document-actions";
 import { DocumentEditor } from "@/components/documents/document-editor";
 import { DocumentShareDialog } from "@/components/documents/document-share-dialog";
+import { PresentationEditor } from "@/components/documents/presentation-editor";
+import { RichDocumentEditor } from "@/components/documents/rich-document-editor";
+import { SpreadsheetEditor } from "@/components/documents/spreadsheet-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getWorkspaceContext } from "@/lib/auth/session";
@@ -12,6 +15,12 @@ import {
   canEditDocument,
   canManageDocumentSharing,
 } from "@/lib/documents/permissions";
+import { parseOfficeEditorState } from "@/lib/documents/office-state";
+import type {
+  PresentationState,
+  RichDocumentState,
+  SpreadsheetState,
+} from "@/lib/documents/office-types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function DocumentDetailPage({
@@ -28,7 +37,7 @@ export default async function DocumentDetailPage({
     supabase
       .from("documents")
       .select(
-        "id, uploaded_by, file_name, mime_type, file_size, visibility, editable_content, content_revision, last_edited_at, summary_draft",
+        "id, uploaded_by, file_name, mime_type, file_size, visibility, editable_content, editor_kind, editor_state, content_revision, last_edited_at, summary_draft",
       )
       .eq("id", documentId)
       .eq("workspace_id", context.workspace.id)
@@ -104,7 +113,16 @@ export default async function DocumentDetailPage({
     }));
   }
 
-  const editable = document.editable_content !== null;
+  const officeState =
+    document.editor_kind &&
+    document.editor_kind !== "text" &&
+    document.editor_state
+      ? parseOfficeEditorState(document.editor_kind, document.editor_state)
+      : null;
+  const editable =
+    document.editor_kind === "text"
+      ? document.editable_content !== null
+      : officeState?.success === true;
   const format = document.mime_type === "text/markdown" ? "md" : "txt";
 
   return (
@@ -150,13 +168,43 @@ export default async function DocumentDetailPage({
         />
       </div>
 
-      {editable ? (
+      {editable && document.editor_kind === "text" ? (
         <DocumentEditor
           documentId={document.id}
           initialFileName={document.file_name}
           initialContent={document.editable_content ?? ""}
           initialRevision={document.content_revision}
           format={format}
+          canEdit={canEdit}
+        />
+      ) : editable &&
+        document.editor_kind === "rich_document" &&
+        officeState?.success ? (
+        <RichDocumentEditor
+          documentId={document.id}
+          initialFileName={document.file_name}
+          initialState={officeState.data as RichDocumentState}
+          initialRevision={document.content_revision}
+          canEdit={canEdit}
+        />
+      ) : editable &&
+        document.editor_kind === "spreadsheet" &&
+        officeState?.success ? (
+        <SpreadsheetEditor
+          documentId={document.id}
+          initialFileName={document.file_name}
+          initialState={officeState.data as SpreadsheetState}
+          initialRevision={document.content_revision}
+          canEdit={canEdit}
+        />
+      ) : editable &&
+        document.editor_kind === "presentation" &&
+        officeState?.success ? (
+        <PresentationEditor
+          documentId={document.id}
+          initialFileName={document.file_name}
+          initialState={officeState.data as PresentationState}
+          initialRevision={document.content_revision}
           canEdit={canEdit}
         />
       ) : (
@@ -168,8 +216,9 @@ export default async function DocumentDetailPage({
             />
             <h2 className="mt-4 text-lg font-semibold">Preview unavailable</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Export this file to open it in its native application. In-app
-              editing is available for TXT and Markdown files up to 1 MB.
+              Export this file to open it in its native application. DOCX and
+              XLSX imports become editable; imported PPTX files keep their
+              original layout and remain export-only.
             </p>
             <Button className="mt-5" asChild>
               <a href={`/api/documents/${document.id}/download`}>Export file</a>

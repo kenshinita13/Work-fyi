@@ -28,19 +28,39 @@ const editableContentSchema = z
     "Editable documents must be 1 MB or smaller.",
   );
 
-export const documentCreateSchema = z.object({
-  fileName: documentFileNameSchema,
-  format: z.enum(["txt", "md"]),
-  content: editableContentSchema,
+const documentLinksSchema = {
   projectId: optionalUuid,
   taskId: optionalUuid,
-});
+};
 
-export const documentSaveSchema = z.object({
-  fileName: documentFileNameSchema,
-  content: editableContentSchema,
-  expectedRevision: z.number().int().positive(),
-});
+export const documentCreateSchema = z.discriminatedUnion("format", [
+  z.object({
+    fileName: documentFileNameSchema,
+    format: z.enum(["txt", "md"]),
+    content: editableContentSchema,
+    ...documentLinksSchema,
+  }),
+  z.object({
+    fileName: documentFileNameSchema,
+    format: z.enum(["docx", "xlsx", "pptx"]),
+    ...documentLinksSchema,
+  }),
+]);
+
+export const documentSaveSchema = z.discriminatedUnion("editorKind", [
+  z.object({
+    editorKind: z.literal("text"),
+    fileName: documentFileNameSchema,
+    content: editableContentSchema,
+    expectedRevision: z.number().int().positive(),
+  }),
+  z.object({
+    editorKind: z.enum(["rich_document", "spreadsheet", "presentation"]),
+    fileName: documentFileNameSchema,
+    editorState: z.unknown(),
+    expectedRevision: z.number().int().positive(),
+  }),
+]);
 
 export const documentSharingSchema = z
   .object({

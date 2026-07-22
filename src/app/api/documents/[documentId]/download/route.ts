@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 
 import { getWorkspaceContext } from "@/lib/auth/session";
 import { DOCUMENT_BUCKET } from "@/lib/documents/constants";
+import { exportOfficeEditorState } from "@/lib/documents/office";
+import { parseOfficeEditorState } from "@/lib/documents/office-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { documentIdSchema } from "@/lib/validation/document";
+
+export const runtime = "nodejs";
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -31,7 +35,9 @@ export async function GET(
   const supabase = await createSupabaseServerClient();
   const { data: document } = await supabase
     .from("documents")
-    .select("storage_path, file_name, mime_type, editable_content")
+    .select(
+      "storage_path, file_name, mime_type, editable_content, editor_kind, editor_state",
+    )
     .eq("id", parsed.data.documentId)
     .eq("workspace_id", context.workspace.id)
     .is("deleted_at", null)
@@ -42,6 +48,31 @@ export async function GET(
     return new Response(document.editable_content, {
       headers: {
         "Content-Type": `${document.mime_type}; charset=utf-8`,
+        "Content-Disposition": contentDisposition(document.file_name),
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+
+  if (
+    document.editor_kind &&
+    document.editor_kind !== "text" &&
+    document.editor_state
+  ) {
+    const state = parseOfficeEditorState(
+      document.editor_kind,
+      document.editor_state,
+    );
+    if (!state.success) {
+      return errorResponse("The document content is invalid.", 500);
+    }
+    const bytes = await exportOfficeEditorState(
+      document.editor_kind,
+      state.data,
+    );
+    return new Response(Buffer.from(bytes), {
+      headers: {
+        "Content-Type": document.mime_type,
         "Content-Disposition": contentDisposition(document.file_name),
         "X-Content-Type-Options": "nosniff",
       },
