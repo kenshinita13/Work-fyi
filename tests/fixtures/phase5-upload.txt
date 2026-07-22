@@ -1,0 +1,3 @@
+Work.fyi Phase 5 verification
+
+This document confirms private upload, workspace access, secure download, and deletion behavior.

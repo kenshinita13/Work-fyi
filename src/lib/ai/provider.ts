@@ -7,7 +7,7 @@ import { getAiEnv } from "@/lib/env/server";
 let provider: ReturnType<typeof createOpenAI> | null = null;
 let providerKey: string | null = null;
 
-export function getTaskPlanningModel() {
+export function getAiModel() {
   const env = getAiEnv();
 
   if (!provider || providerKey !== env.aiApiKey) {

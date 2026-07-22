@@ -3,7 +3,7 @@ import "server-only";
 import type { OpenAILanguageModelResponsesOptions } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
 
-import { getTaskPlanningModel } from "@/lib/ai/provider";
+import { getAiModel } from "@/lib/ai/provider";
 import { redactPotentialSecrets } from "@/lib/ai/redact";
 import {
   generatedTaskPlanSchema,
@@ -24,7 +24,7 @@ type PlanningContext = {
 };
 
 export async function generateTaskPlan(context: PlanningContext) {
-  const { model, modelId } = getTaskPlanningModel();
+  const { model, modelId } = getAiModel();
   const modeInstruction =
     context.request.mode === "subtasks"
       ? "Generate focused child tasks for the supplied parent task."

@@ -26,6 +26,7 @@ export async function refreshAuthSession(request: NextRequest) {
     "/dashboard",
     "/projects",
     "/tasks",
+    "/documents",
     "/ai",
     "/team",
   ].some(

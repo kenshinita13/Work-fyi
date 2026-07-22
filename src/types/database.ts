@@ -13,6 +13,15 @@ export type TaskStatus =
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type AiTaskPlanMode = "task_plan" | "subtasks";
 export type AiTaskPlanDraftStatus = "pending" | "approved" | "expired";
+export type DocumentMimeType =
+  | "application/pdf"
+  | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  | "text/plain"
+  | "text/markdown";
+export type DocumentSummary = {
+  summary: string;
+  highlights: string[];
+};
 type AiMessageRole = "user" | "assistant" | "system" | "tool";
 export type PrimaryRole =
   | "virtual_assistant"
@@ -340,6 +349,55 @@ export type Database = {
         >;
         Relationships: [];
       };
+      documents: {
+        Row: Timestamped & {
+          id: string;
+          workspace_id: string;
+          project_id: string | null;
+          task_id: string | null;
+          uploaded_by: string;
+          file_name: string;
+          storage_path: string;
+          mime_type: DocumentMimeType;
+          file_size: number;
+          summary_draft: DocumentSummary | null;
+          summary_model: string | null;
+          summary_generated_at: string | null;
+          deleted_at: string | null;
+          deleted_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          project_id?: string | null;
+          task_id?: string | null;
+          uploaded_by: string;
+          file_name: string;
+          storage_path: string;
+          mime_type: DocumentMimeType;
+          file_size: number;
+          summary_draft?: DocumentSummary | null;
+          summary_model?: string | null;
+          summary_generated_at?: string | null;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Pick<
+            Database["public"]["Tables"]["documents"]["Insert"],
+            | "project_id"
+            | "task_id"
+            | "summary_draft"
+            | "summary_model"
+            | "summary_generated_at"
+            | "deleted_at"
+            | "deleted_by"
+          >
+        >;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -373,6 +431,14 @@ export type Database = {
         Args: { input_draft_id: string };
         Returns: number;
       };
+      reserve_document_summary_usage: {
+        Args: {
+          input_workspace_id: string;
+          input_user_id: string;
+          input_model: string;
+        };
+        Returns: string;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -381,3 +447,4 @@ export type Database = {
 
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
 export type Task = Database["public"]["Tables"]["tasks"]["Row"];
+export type Document = Database["public"]["Tables"]["documents"]["Row"];

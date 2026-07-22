@@ -55,7 +55,7 @@ const navigation = [
   },
   { label: "Projects", icon: FolderKanban, href: "/projects", ready: true },
   { label: "Tasks", icon: ListTodo, href: "/tasks", ready: true },
-  { label: "Documents", icon: FileText, ready: false },
+  { label: "Documents", icon: FileText, href: "/documents", ready: true },
   { label: "AI Assistant", icon: Sparkles, href: "/ai", ready: true },
   { label: "Calendar", icon: CalendarDays, ready: false },
   { label: "Email", icon: Mail, ready: false },
@@ -240,6 +240,12 @@ export function AppShell({
                     <Link href="/ai">
                       <Sparkles className="size-4" aria-hidden="true" />
                       Plan with AI
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/documents?new=1">
+                      <FileText className="size-4" aria-hidden="true" />
+                      Upload document
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
