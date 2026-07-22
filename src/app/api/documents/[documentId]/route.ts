@@ -9,6 +9,7 @@ import {
   canManageDocumentSharing,
 } from "@/lib/documents/permissions";
 import { canManageProjects } from "@/lib/projects/permissions";
+import { isRequestSameOrigin } from "@/lib/http/origin";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -20,22 +21,12 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-function isSameOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).origin === request.nextUrl.origin;
-  } catch {
-    return false;
-  }
-}
-
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ documentId: string }> },
 ) {
-  if (!isSameOrigin(request)) return errorResponse("Request rejected.", 403);
+  if (!isRequestSameOrigin(request))
+    return errorResponse("Request rejected.", 403);
 
   const parsedId = documentIdSchema.safeParse(await params);
   if (!parsedId.success) return errorResponse("Document not found.", 404);
@@ -184,7 +175,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ documentId: string }> },
 ) {
-  if (!isSameOrigin(request)) return errorResponse("Request rejected.", 403);
+  if (!isRequestSameOrigin(request))
+    return errorResponse("Request rejected.", 403);
 
   const parsed = documentIdSchema.safeParse(await params);
   if (!parsed.success) return errorResponse("Document not found.", 404);

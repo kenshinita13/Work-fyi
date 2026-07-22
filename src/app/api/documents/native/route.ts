@@ -15,6 +15,7 @@ import {
   createSpreadsheetState,
 } from "@/lib/documents/office-types";
 import { canManageProjects } from "@/lib/projects/permissions";
+import { isRequestSameOrigin } from "@/lib/http/origin";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { documentCreateSchema } from "@/lib/validation/document";
@@ -23,17 +24,6 @@ export const runtime = "nodejs";
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
-}
-
-function isSameOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).origin === request.nextUrl.origin;
-  } catch {
-    return false;
-  }
 }
 
 type NativeFormat = "txt" | "md" | "docx" | "xlsx" | "pptx";
@@ -46,7 +36,8 @@ function withExtension(fileName: string, format: NativeFormat) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request)) return errorResponse("Request rejected.", 403);
+  if (!isRequestSameOrigin(request))
+    return errorResponse("Request rejected.", 403);
 
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > MAX_EDITABLE_DOCUMENT_BYTES + 64 * 1024) {

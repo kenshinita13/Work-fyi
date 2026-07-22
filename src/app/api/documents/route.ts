@@ -15,6 +15,7 @@ import {
 import { importRichDocument, importSpreadsheet } from "@/lib/documents/office";
 import { parseOfficeEditorState } from "@/lib/documents/office-state";
 import { canManageProjects } from "@/lib/projects/permissions";
+import { isRequestSameOrigin } from "@/lib/http/origin";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { documentUploadFieldsSchema } from "@/lib/validation/document";
@@ -28,19 +29,9 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-function isSameOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).origin === request.nextUrl.origin;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request)) return errorResponse("Request rejected.", 403);
+  if (!isRequestSameOrigin(request))
+    return errorResponse("Request rejected.", 403);
 
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > MAX_MULTIPART_BYTES) {

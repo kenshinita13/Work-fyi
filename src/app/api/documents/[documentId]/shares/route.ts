@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getWorkspaceContext } from "@/lib/auth/session";
 import { canManageDocumentSharing } from "@/lib/documents/permissions";
+import { isRequestSameOrigin } from "@/lib/http/origin";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -13,22 +14,12 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-function isSameOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).origin === request.nextUrl.origin;
-  } catch {
-    return false;
-  }
-}
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ documentId: string }> },
 ) {
-  if (!isSameOrigin(request)) return errorResponse("Request rejected.", 403);
+  if (!isRequestSameOrigin(request))
+    return errorResponse("Request rejected.", 403);
 
   const parsedId = documentIdSchema.safeParse(await params);
   if (!parsedId.success) return errorResponse("Document not found.", 404);

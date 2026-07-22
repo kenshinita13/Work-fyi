@@ -4,6 +4,7 @@ import { generateTaskPlan } from "@/lib/ai/task-planner";
 import { getWorkspaceContext } from "@/lib/auth/session";
 import { getAiEnv } from "@/lib/env/server";
 import { canManageProjects } from "@/lib/projects/permissions";
+import { isRequestSameOrigin } from "@/lib/http/origin";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { aiTaskPlanRequestSchema } from "@/lib/validation/ai-task-plan";
@@ -17,19 +18,9 @@ function errorResponse(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
 
-function isSameOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).origin === request.nextUrl.origin;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request)) return errorResponse("Request rejected.", 403);
+  if (!isRequestSameOrigin(request))
+    return errorResponse("Request rejected.", 403);
 
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > MAX_REQUEST_BYTES) {
