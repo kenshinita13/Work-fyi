@@ -2,6 +2,14 @@ import "server-only";
 
 import { z } from "zod";
 
+const encryptionKeySchema = z.string().refine((value) => {
+  try {
+    return Buffer.from(value, "base64").length === 32;
+  } catch {
+    return false;
+  }
+}, "ENCRYPTION_KEY must be a base64-encoded 32-byte key.");
+
 const serverEnvSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
@@ -13,7 +21,7 @@ const serverEnvSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   GOOGLE_REDIRECT_URI: z.url(),
-  ENCRYPTION_KEY: z.string().min(32),
+  ENCRYPTION_KEY: encryptionKeySchema,
 });
 
 const supabaseServerEnvSchema = z.object({
@@ -28,6 +36,14 @@ const aiEnvSchema = z.object({
     .min(1)
     .max(200)
     .regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]*$/),
+});
+
+const googleEnvSchema = z.object({
+  NEXT_PUBLIC_APP_URL: z.url(),
+  GOOGLE_CLIENT_ID: z.string().min(20),
+  GOOGLE_CLIENT_SECRET: z.string().min(8),
+  GOOGLE_REDIRECT_URI: z.url(),
+  ENCRYPTION_KEY: encryptionKeySchema,
 });
 
 export type ServerEnv = {
@@ -53,6 +69,14 @@ export type AiEnv = {
   aiModel: string;
 };
 
+export type GoogleEnv = {
+  appUrl: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  encryptionKey: string;
+};
+
 export function getSupabaseServerEnv(
   source: Record<string, string | undefined> = process.env,
 ): SupabaseServerEnv {
@@ -73,6 +97,26 @@ export function getAiEnv(
     aiApiKey: env.AI_API_KEY,
     aiModel: env.AI_MODEL,
   };
+}
+
+export function getGoogleEnv(
+  source: Record<string, string | undefined> = process.env,
+): GoogleEnv {
+  const env = googleEnvSchema.parse(source);
+
+  return {
+    appUrl: env.NEXT_PUBLIC_APP_URL,
+    clientId: env.GOOGLE_CLIENT_ID,
+    clientSecret: env.GOOGLE_CLIENT_SECRET,
+    redirectUri: env.GOOGLE_REDIRECT_URI,
+    encryptionKey: env.ENCRYPTION_KEY,
+  };
+}
+
+export function isGoogleConfigured(
+  source: Record<string, string | undefined> = process.env,
+) {
+  return googleEnvSchema.safeParse(source).success;
 }
 
 export function getServerEnv(

@@ -11,6 +11,11 @@ import { SpreadsheetEditor } from "@/components/documents/spreadsheet-editor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getWorkspaceContext } from "@/lib/auth/session";
+import { isGoogleConfigured } from "@/lib/env/server";
+import {
+  GOOGLE_CORE_SCOPES,
+  hasGoogleScopes,
+} from "@/lib/integrations/google/scopes";
 import {
   canEditDocument,
   canManageDocumentSharing,
@@ -22,6 +27,7 @@ import type {
   SpreadsheetState,
 } from "@/lib/documents/office-types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export default async function DocumentDetailPage({
   params,
@@ -51,6 +57,31 @@ export default async function DocumentDetailPage({
       .maybeSingle(),
   ]);
   if (!document) notFound();
+
+  const admin = getSupabaseAdminClient();
+  const [{ data: googleLink }, { data: googleIntegration }] = await Promise.all(
+    [
+      admin
+        .from("google_document_links")
+        .select("google_web_url")
+        .eq("workspace_id", context.workspace.id)
+        .eq("document_id", document.id)
+        .eq("user_id", context.claims.sub)
+        .maybeSingle(),
+      admin
+        .from("user_integrations")
+        .select("status,scopes")
+        .eq("workspace_id", context.workspace.id)
+        .eq("user_id", context.claims.sub)
+        .eq("provider", "google")
+        .maybeSingle(),
+    ],
+  );
+  const googleConnected = Boolean(
+    isGoogleConfigured() &&
+    googleIntegration?.status === "active" &&
+    hasGoogleScopes(googleIntegration.scopes, [GOOGLE_CORE_SCOPES[1]]),
+  );
 
   const canEdit = canEditDocument(
     context.membership.role,
@@ -186,6 +217,8 @@ export default async function DocumentDetailPage({
           initialState={officeState.data as RichDocumentState}
           initialRevision={document.content_revision}
           canEdit={canEdit}
+          initialGoogleUrl={googleLink?.google_web_url ?? null}
+          googleConnected={googleConnected}
         />
       ) : editable &&
         document.editor_kind === "spreadsheet" &&
@@ -196,6 +229,8 @@ export default async function DocumentDetailPage({
           initialState={officeState.data as SpreadsheetState}
           initialRevision={document.content_revision}
           canEdit={canEdit}
+          initialGoogleUrl={googleLink?.google_web_url ?? null}
+          googleConnected={googleConnected}
         />
       ) : editable &&
         document.editor_kind === "presentation" &&
@@ -206,6 +241,8 @@ export default async function DocumentDetailPage({
           initialState={officeState.data as PresentationState}
           initialRevision={document.content_revision}
           canEdit={canEdit}
+          initialGoogleUrl={googleLink?.google_web_url ?? null}
+          googleConnected={googleConnected}
         />
       ) : (
         <div className="border-t px-4 py-20 sm:px-6">

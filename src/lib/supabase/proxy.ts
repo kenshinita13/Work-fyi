@@ -28,6 +28,9 @@ export async function refreshAuthSession(request: NextRequest) {
     "/tasks",
     "/documents",
     "/ai",
+    "/calendar",
+    "/email",
+    "/integrations",
     "/team",
   ].some(
     (route) =>

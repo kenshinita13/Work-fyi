@@ -15,6 +15,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GooglePublishButton } from "@/components/documents/google-publish-button";
 import type { SpreadsheetState } from "@/lib/documents/office-types";
 
 type SpreadsheetEditorProps = {
@@ -23,6 +24,8 @@ type SpreadsheetEditorProps = {
   initialState: SpreadsheetState;
   initialRevision: number;
   canEdit: boolean;
+  initialGoogleUrl?: string | null;
+  googleConnected: boolean;
 };
 
 function columnName(index: number) {
@@ -51,6 +54,8 @@ export function SpreadsheetEditor({
   initialState,
   initialRevision,
   canEdit,
+  initialGoogleUrl,
+  googleConnected,
 }: SpreadsheetEditorProps) {
   const router = useRouter();
   const [fileName, setFileName] = useState(initialFileName);
@@ -229,6 +234,15 @@ export function SpreadsheetEditor({
             Export
           </a>
         </Button>
+        {canEdit && (
+          <GooglePublishButton
+            documentId={documentId}
+            revision={revision}
+            target="sheets"
+            initialUrl={initialGoogleUrl}
+            connected={googleConnected}
+          />
+        )}
         {canEdit && (
           <Button type="button" onClick={saveSpreadsheet} disabled={saving}>
             <Save className="size-4" aria-hidden="true" />

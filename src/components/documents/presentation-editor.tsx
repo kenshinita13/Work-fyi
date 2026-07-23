@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { GooglePublishButton } from "@/components/documents/google-publish-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { PresentationState } from "@/lib/documents/office-types";
@@ -16,6 +17,8 @@ type PresentationEditorProps = {
   initialState: PresentationState;
   initialRevision: number;
   canEdit: boolean;
+  initialGoogleUrl?: string | null;
+  googleConnected: boolean;
 };
 
 async function responseError(response: Response) {
@@ -33,6 +36,8 @@ export function PresentationEditor({
   initialState,
   initialRevision,
   canEdit,
+  initialGoogleUrl,
+  googleConnected,
 }: PresentationEditorProps) {
   const router = useRouter();
   const [fileName, setFileName] = useState(initialFileName);
@@ -136,6 +141,15 @@ export function PresentationEditor({
             Export
           </a>
         </Button>
+        {canEdit && (
+          <GooglePublishButton
+            documentId={documentId}
+            revision={revision}
+            target="slides"
+            initialUrl={initialGoogleUrl}
+            connected={googleConnected}
+          />
+        )}
         {canEdit && (
           <Button type="button" onClick={savePresentation} disabled={saving}>
             <Save className="size-4" aria-hidden="true" />

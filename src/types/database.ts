@@ -28,6 +28,7 @@ export type DocumentVisibility = "workspace" | "restricted";
 export type DocumentSharePermission = "viewer" | "editor";
 export type DocumentEditorKind =
   "text" | "rich_document" | "spreadsheet" | "presentation";
+export type IntegrationStatus = "active" | "error" | "revoked";
 type AiMessageRole = "user" | "assistant" | "system" | "tool";
 export type PrimaryRole =
   | "virtual_assistant"
@@ -450,6 +451,114 @@ export type Database = {
         >;
         Relationships: [];
       };
+      user_integrations: {
+        Row: Timestamped & {
+          id: string;
+          workspace_id: string;
+          user_id: string;
+          provider: "google";
+          provider_account_id: string;
+          account_email: string;
+          display_name: string | null;
+          access_token_ciphertext: string;
+          refresh_token_ciphertext: string | null;
+          token_expires_at: string;
+          scopes: string[];
+          status: IntegrationStatus;
+          last_error_code: string | null;
+          connected_at: string;
+          last_refreshed_at: string | null;
+          revoked_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          user_id: string;
+          provider: "google";
+          provider_account_id: string;
+          account_email: string;
+          display_name?: string | null;
+          access_token_ciphertext: string;
+          refresh_token_ciphertext?: string | null;
+          token_expires_at: string;
+          scopes?: string[];
+          status?: IntegrationStatus;
+          last_error_code?: string | null;
+          connected_at?: string;
+          last_refreshed_at?: string | null;
+          revoked_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Omit<
+            Database["public"]["Tables"]["user_integrations"]["Insert"],
+            "id" | "workspace_id" | "user_id" | "provider"
+          >
+        >;
+        Relationships: [];
+      };
+      google_document_links: {
+        Row: Timestamped & {
+          id: string;
+          workspace_id: string;
+          document_id: string;
+          user_id: string;
+          google_file_id: string;
+          google_mime_type: string;
+          google_web_url: string;
+          google_modified_time: string | null;
+          last_synced_revision: number;
+          last_synced_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          document_id: string;
+          user_id: string;
+          google_file_id: string;
+          google_mime_type: string;
+          google_web_url: string;
+          google_modified_time?: string | null;
+          last_synced_revision?: number;
+          last_synced_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Omit<
+            Database["public"]["Tables"]["google_document_links"]["Insert"],
+            "id" | "workspace_id" | "document_id" | "user_id"
+          >
+        >;
+        Relationships: [];
+      };
+      security_audit_logs: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          actor_id: string | null;
+          event_type: string;
+          provider: string | null;
+          resource_type: string;
+          resource_id: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          actor_id?: string | null;
+          event_type: string;
+          provider?: string | null;
+          resource_type: string;
+          resource_id?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -484,6 +593,14 @@ export type Database = {
         Returns: number;
       };
       reserve_document_summary_usage: {
+        Args: {
+          input_workspace_id: string;
+          input_user_id: string;
+          input_model: string;
+        };
+        Returns: string;
+      };
+      reserve_google_email_summary_usage: {
         Args: {
           input_workspace_id: string;
           input_user_id: string;

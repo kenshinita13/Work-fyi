@@ -25,6 +25,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GooglePublishButton } from "@/components/documents/google-publish-button";
 import type { RichDocumentState } from "@/lib/documents/office-types";
 
 type RichDocumentEditorProps = {
@@ -33,6 +34,8 @@ type RichDocumentEditorProps = {
   initialState: RichDocumentState;
   initialRevision: number;
   canEdit: boolean;
+  initialGoogleUrl?: string | null;
+  googleConnected: boolean;
 };
 
 async function responseError(response: Response) {
@@ -50,6 +53,8 @@ export function RichDocumentEditor({
   initialState,
   initialRevision,
   canEdit,
+  initialGoogleUrl,
+  googleConnected,
 }: RichDocumentEditorProps) {
   const router = useRouter();
   const [fileName, setFileName] = useState(initialFileName);
@@ -226,6 +231,15 @@ export function RichDocumentEditor({
               Export
             </a>
           </Button>
+          {canEdit && (
+            <GooglePublishButton
+              documentId={documentId}
+              revision={revision}
+              target="docs"
+              initialUrl={initialGoogleUrl}
+              connected={googleConnected}
+            />
+          )}
           {canEdit && (
             <Button
               type="button"
